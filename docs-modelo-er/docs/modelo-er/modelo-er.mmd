@@ -1,0 +1,110 @@
+erDiagram
+    role ||--o{ app_user : "asigna"
+    app_user ||--o| client : "corresponde a"
+    stadium ||--o{ section : "contiene"
+    section ||--o{ seat_row : "contiene"
+    seat_row ||--o{ seat : "contiene"
+    stadium ||--o{ sport_match : "se juega en"
+    reservation ||--|{ seat_lock : "bloquea"
+    reservation ||--o{ ticket : "emite"
+    client ||..o{ reservation : "realiza (REST)"
+    sport_match ||..o{ reservation : "para (REST)"
+    seat ||..o{ seat_lock : "bloqueado en (REST)"
+    seat ||..o{ ticket : "asignado a (REST)"
+    role {
+        bigserial id PK
+        varchar name UK "NOT NULL · ADMIN | CLIENTE"
+        varchar description
+        varchar status "NOT NULL · ACTIVO | INACTIVO"
+    }
+    app_user {
+        bigserial id PK
+        varchar username UK "NOT NULL · generado al registrarse"
+        varchar password_hash "NOT NULL · BCrypt"
+        bigint role_id FK "NOT NULL"
+        varchar status "NOT NULL · ACTIVO | INACTIVO"
+        boolean must_change_password "NOT NULL · contraseña de primer acceso"
+        timestamp created_at "NOT NULL"
+        timestamp last_login_at
+    }
+    client {
+        bigserial id PK
+        varchar first_name "NOT NULL"
+        varchar middle_name
+        varchar last_name "NOT NULL"
+        varchar cedula UK "NOT NULL"
+        varchar nationality "NOT NULL"
+        varchar address "NOT NULL"
+        varchar phone "NOT NULL"
+        varchar email UK "NOT NULL"
+        bigint user_id FK, UK "NOT NULL · relación 1 : 0..1"
+    }
+    stadium {
+        bigserial id PK
+        varchar name UK "NOT NULL"
+        varchar description
+        varchar location "NOT NULL"
+        int total_capacity "NOT NULL · CHECK > 0"
+    }
+    section {
+        bigserial id PK
+        bigint stadium_id FK "NOT NULL"
+        varchar name "NOT NULL · UNIQUE(stadium_id, name)"
+        varchar description
+        varchar section_type "NOT NULL · PALCOS | GENERAL | PREFERENCIA | TRIBUNAS"
+        int row_count "NOT NULL · CHECK > 0"
+        int seats_per_row "NOT NULL · CHECK > 0"
+        int capacity "NOT NULL · CHECK = row_count * seats_per_row"
+    }
+    seat_row {
+        bigserial id PK
+        bigint section_id FK "NOT NULL"
+        varchar letter "NOT NULL · A, B, C… · UNIQUE(section_id, letter)"
+    }
+    seat {
+        bigserial id PK
+        bigint seat_row_id FK "NOT NULL"
+        int seat_number "NOT NULL · CHECK > 0 · UNIQUE(seat_row_id, seat_number)"
+    }
+    sport_match {
+        bigserial id PK
+        varchar name "NOT NULL"
+        varchar description
+        date match_date "NOT NULL"
+        time match_time "NOT NULL"
+        varchar status "NOT NULL · PROGRAMADO | EN_CURSO | FINALIZADO | CANCELADO"
+        bigint stadium_id FK "NOT NULL"
+    }
+    parameter {
+        bigserial id PK
+        varchar code UK "NOT NULL · MAX_TICKETS_PER_MATCH, HOLD_MINUTES"
+        varchar value "NOT NULL"
+        varchar description
+    }
+    reservation {
+        bigserial id PK
+        varchar code UK "NOT NULL · identificador único de la reserva"
+        bigint client_id "NOT NULL · referencia lógica a ms-usuarios"
+        bigint match_id "NOT NULL · referencia lógica a ms-partidos"
+        varchar status "NOT NULL · PENDIENTE | CONFIRMADA | CANCELADA | EXPIRADA"
+        timestamp created_at "NOT NULL"
+        timestamp expires_at "NOT NULL · created_at + HOLD_MINUTES"
+        timestamp confirmed_at
+        timestamp cancelled_at
+    }
+    seat_lock {
+        bigserial id PK
+        bigint reservation_id FK "NOT NULL"
+        bigint match_id "NOT NULL · copia de reservation.match_id"
+        bigint seat_id "NOT NULL · referencia lógica a ms-partidos"
+        varchar status "NOT NULL · HELD | RESERVED"
+    }
+    ticket {
+        bigserial id PK
+        bigint reservation_id FK "NOT NULL"
+        bigint seat_id "NOT NULL · referencia lógica a ms-partidos"
+        varchar qr_code UK "NOT NULL · token aleatorio, no secuencial"
+        varchar status "NOT NULL · ACTIVO | UTILIZADO | ANULADO"
+        timestamp issued_at "NOT NULL"
+        timestamp used_at
+    }
