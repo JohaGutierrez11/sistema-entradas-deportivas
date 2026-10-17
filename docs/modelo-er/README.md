@@ -49,6 +49,7 @@ erDiagram
     }
     client {
         bigserial id PK
+        uuid public_id UK "NOT NULL · id expuesto en la API"
         varchar first_name "NOT NULL"
         varchar middle_name
         varchar last_name "NOT NULL"
@@ -103,7 +104,8 @@ erDiagram
     }
     reservation {
         bigserial id PK
-        varchar code UK "NOT NULL · identificador único de la reserva"
+        uuid public_id UK "NOT NULL · id expuesto en la API"
+        varchar code UK "NOT NULL · código legible para personas"
         bigint client_id "NOT NULL · referencia lógica a ms-usuarios"
         bigint match_id "NOT NULL · referencia lógica a ms-partidos"
         varchar status "NOT NULL · PENDIENTE | CONFIRMADA | CANCELADA | EXPIRADA"
@@ -121,6 +123,7 @@ erDiagram
     }
     ticket {
         bigserial id PK
+        uuid public_id UK "NOT NULL · id expuesto en la API"
         bigint reservation_id FK "NOT NULL"
         bigint seat_id "NOT NULL · referencia lógica a ms-partidos"
         varchar qr_code UK "NOT NULL · token aleatorio, no secuencial"
@@ -159,6 +162,8 @@ erDiagram
 9. **`section.capacity` tiene `CHECK (capacity = row_count * seats_per_row)`**: el enunciado pide guardar los tres valores y la restricción impide que se contradigan.
 10. **Las reglas configurables viven en `parameter`** (`MAX_TICKETS_PER_MATCH = 6`, `HOLD_MINUTES`). Cambiar el límite es actualizar un registro, no el código.
 11. **Identificadores en inglés y datos de negocio en español** (`PALCOS`, `PENDIENTE`, `ACTIVO`). Las tablas `app_user`, `seat_row` y `sport_match` evitan las palabras reservadas `user`, `row` y `match`.
+12. **Id interno + id público.** Todas las tablas usan `id BIGINT` como PK interna: joins rápidos, índices compactos y semillas legibles. `client`, `reservation` y `ticket` agregan `public_id UUID`, el único identificador que viaja en las URLs de la API (`/api/reservations/{public_id}`). Un id secuencial en la URL permite enumerar recursos ajenos (IDOR); el UUID lo impide. El catálogo (estadios, secciones, partidos) es información pública y conserva el `id` numérico en la URL. **El UUID no reemplaza la autorización:** el servicio igual verifica que el recurso pertenezca al usuario del token.
+13. **`reservation.code` es para personas, no para la API.** Un código legible como `RES-2026-000123` es adivinable; sirve para soporte y para el boleto impreso, pero no como identificador en URLs.
 
 ## Reglas que la base de datos no puede garantizar
 

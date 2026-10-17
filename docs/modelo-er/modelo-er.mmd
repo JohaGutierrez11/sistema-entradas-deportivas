@@ -29,6 +29,7 @@ erDiagram
     }
     client {
         bigserial id PK
+        uuid public_id UK "NOT NULL · id expuesto en la API"
         varchar first_name "NOT NULL"
         varchar middle_name
         varchar last_name "NOT NULL"
@@ -83,7 +84,8 @@ erDiagram
     }
     reservation {
         bigserial id PK
-        varchar code UK "NOT NULL · identificador único de la reserva"
+        uuid public_id UK "NOT NULL · id expuesto en la API"
+        varchar code UK "NOT NULL · código legible para personas"
         bigint client_id "NOT NULL · referencia lógica a ms-usuarios"
         bigint match_id "NOT NULL · referencia lógica a ms-partidos"
         varchar status "NOT NULL · PENDIENTE | CONFIRMADA | CANCELADA | EXPIRADA"
@@ -101,6 +103,7 @@ erDiagram
     }
     ticket {
         bigserial id PK
+        uuid public_id UK "NOT NULL · id expuesto en la API"
         bigint reservation_id FK "NOT NULL"
         bigint seat_id "NOT NULL · referencia lógica a ms-partidos"
         varchar qr_code UK "NOT NULL · token aleatorio, no secuencial"
