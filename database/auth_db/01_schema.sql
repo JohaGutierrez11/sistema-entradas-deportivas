@@ -40,13 +40,18 @@ CREATE TABLE app_user (
     password_hash        VARCHAR(100) NOT NULL,
     role_id              BIGINT       NOT NULL,
     status               VARCHAR(10)  NOT NULL DEFAULT 'ACTIVO',
-    must_change_password BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at           TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_login_at        TIMESTAMP,
+    must_change_password  BOOLEAN      NOT NULL DEFAULT TRUE,
+    failed_login_attempts INT          NOT NULL DEFAULT 0,
+    locked_until          TIMESTAMP,
+    created_at            TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at         TIMESTAMP,
 
     CONSTRAINT pk_app_user          PRIMARY KEY (id),
     CONSTRAINT fk_app_user_role     FOREIGN KEY (role_id) REFERENCES role (id) ON DELETE RESTRICT,
-    CONSTRAINT ck_app_user_status   CHECK (status IN ('ACTIVO', 'INACTIVO')),
+    CONSTRAINT ck_app_user_status   CHECK (status IN ('ACTIVO', 'INACTIVO', 'BLOQUEADO')),
+    CONSTRAINT ck_app_user_attempts CHECK (failed_login_attempts >= 0),
+    -- Un bloqueo siempre tiene fecha de fin: sin ella, la cuenta nunca se liberaría sola.
+    CONSTRAINT ck_app_user_locked   CHECK (status <> 'BLOQUEADO' OR locked_until IS NOT NULL),
     CONSTRAINT ck_app_user_username CHECK (username ~ '^[A-Za-z0-9._-]{4,50}$')
 );
 
@@ -56,6 +61,11 @@ CREATE INDEX idx_app_user_role ON app_user (role_id);
 
 COMMENT ON TABLE  app_user IS 'Cuenta de acceso. El admin es un app_user con rol ADMIN y sin fila en client.';
 COMMENT ON COLUMN app_user.password_hash        IS 'Hash BCrypt. Nunca la contraseña en texto plano.';
+COMMENT ON COLUMN app_user.status IS
+  'ACTIVO: uso normal. INACTIVO: dado de baja por el administrador (solo él lo reactiva). '
+  'BLOQUEADO: el sistema lo bloqueó por intentos fallidos; se libera solo al pasar locked_until o si el admin lo desbloquea.';
+COMMENT ON COLUMN app_user.failed_login_attempts IS 'Intentos fallidos consecutivos. Se reinicia a 0 con un login exitoso.';
+COMMENT ON COLUMN app_user.locked_until          IS 'Fin del bloqueo temporal. Obligatorio cuando status = BLOQUEADO.';
 COMMENT ON COLUMN app_user.must_change_password IS 'TRUE mientras el usuario no cambie la contraseña de primer acceso enviada por correo.';
 
 -- ---------------------------------------------------------------------

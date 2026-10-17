@@ -44,6 +44,16 @@ SELECT pg_temp.expect_violation('Usuario sin contraseña',
   $$INSERT INTO app_user (username, role_id) VALUES ('nuevo02', 901)$$, 'NOT NULL:password_hash');
 SELECT pg_temp.expect_violation('Username con espacios',
   $$INSERT INTO app_user (username, password_hash, role_id) VALUES ('jo ha', 'x', 901)$$, 'ck_app_user_username');
+SELECT pg_temp.expect_violation('Usuario con estado desconocido',
+  $$INSERT INTO app_user (username, password_hash, role_id, status) VALUES ('nuevo03', 'x', 901, 'SUSPENDIDO')$$, 'ck_app_user_status');
+SELECT pg_temp.expect_violation('Bloquear sin fecha de fin de bloqueo',
+  $$UPDATE app_user SET status = 'BLOQUEADO', failed_login_attempts = 5 WHERE id = 901$$, 'ck_app_user_locked');
+SELECT pg_temp.expect_ok('Bloquear con fecha de fin de bloqueo',
+  $$UPDATE app_user SET status = 'BLOQUEADO', failed_login_attempts = 5, locked_until = now() + interval '15 minutes' WHERE id = 901$$);
+SELECT pg_temp.expect_ok('Desbloquear: vuelve a ACTIVO y reinicia el contador',
+  $$UPDATE app_user SET status = 'ACTIVO', failed_login_attempts = 0, locked_until = NULL WHERE id = 901$$);
+SELECT pg_temp.expect_violation('Contador de intentos negativo',
+  $$UPDATE app_user SET failed_login_attempts = -1 WHERE id = 901$$, 'ck_app_user_attempts');
 SELECT pg_temp.expect_violation('Borrar un rol que tiene usuarios',
   $$DELETE FROM role WHERE id = 901$$, 'fk_app_user_role');
 

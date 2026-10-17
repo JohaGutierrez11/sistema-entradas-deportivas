@@ -80,102 +80,122 @@
 <!-- app_user -->
 <g id="node2" class="node">
 <title>app_user</title>
-<polygon fill="#1f3864" stroke="transparent" points="413,-656 413,-677 787,-677 787,-656 413,-656"/>
-<polygon fill="none" stroke="black" points="413,-656 413,-677 787,-677 787,-656 413,-656"/>
-<text text-anchor="start" x="574" y="-665" font-family="DejaVu Sans" font-weight="bold" font-size="10.00" fill="white">app_user</text>
-<polygon fill="white" stroke="transparent" points="413,-635 413,-656 439,-656 439,-635 413,-635"/>
-<polygon fill="none" stroke="black" points="413,-635 413,-656 439,-656 439,-635 413,-635"/>
-<text text-anchor="start" x="418" y="-644" font-family="DejaVu Sans" font-weight="bold" font-size="10.00">PK</text>
-<polygon fill="white" stroke="transparent" points="439,-635 439,-656 610,-656 610,-635 439,-635"/>
-<polygon fill="none" stroke="black" points="439,-635 439,-656 610,-656 610,-635 439,-635"/>
-<text text-anchor="start" x="444" y="-644" font-family="DejaVu Sans" text-decoration="underline" font-size="10.00">id</text>
-<text text-anchor="start" x="454" y="-644" font-family="DejaVu Sans" font-size="10.00"> </text>
-<text text-anchor="start" x="458" y="-644" font-family="DejaVu Sans" font-size="10.00" fill="#666666">bigserial</text>
-<polygon fill="white" stroke="transparent" points="610,-635 610,-656 787,-656 787,-635 610,-635"/>
-<polygon fill="none" stroke="black" points="610,-635 610,-656 787,-656 787,-635 610,-635"/>
-<text text-anchor="start" x="615" y="-643" font-family="DejaVu Sans" font-size="10.00"> </text>
-<polygon fill="white" stroke="transparent" points="413,-614 413,-635 439,-635 439,-614 413,-614"/>
-<polygon fill="none" stroke="black" points="413,-614 413,-635 439,-635 439,-614 413,-614"/>
-<text text-anchor="start" x="418" y="-623" font-family="DejaVu Sans" font-weight="bold" font-size="10.00">UK</text>
-<polygon fill="white" stroke="transparent" points="439,-614 439,-635 610,-635 610,-614 439,-614"/>
-<polygon fill="none" stroke="black" points="439,-614 439,-635 610,-635 610,-614 439,-614"/>
-<text text-anchor="start" x="444" y="-623" font-family="DejaVu Sans" font-size="10.00">username </text>
-<text text-anchor="start" x="496" y="-623" font-family="DejaVu Sans" font-size="10.00" fill="#666666">varchar(50)</text>
-<polygon fill="white" stroke="transparent" points="610,-614 610,-635 787,-635 787,-614 610,-614"/>
-<polygon fill="none" stroke="black" points="610,-614 610,-635 787,-635 787,-614 610,-614"/>
-<text text-anchor="start" x="615" y="-622.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · generado al registrarse</text>
-<polygon fill="white" stroke="transparent" points="413,-593 413,-614 439,-614 439,-593 413,-593"/>
-<polygon fill="none" stroke="black" points="413,-593 413,-614 439,-614 439,-593 413,-593"/>
-<text text-anchor="start" x="418" y="-601" font-family="DejaVu Sans" font-size="10.00"> </text>
-<polygon fill="white" stroke="transparent" points="439,-593 439,-614 610,-614 610,-593 439,-593"/>
-<polygon fill="none" stroke="black" points="439,-593 439,-614 610,-614 610,-593 439,-593"/>
-<text text-anchor="start" x="444" y="-602" font-family="DejaVu Sans" font-size="10.00">password_hash </text>
-<text text-anchor="start" x="523" y="-602" font-family="DejaVu Sans" font-size="10.00" fill="#666666">varchar(100)</text>
-<polygon fill="white" stroke="transparent" points="610,-593 610,-614 787,-614 787,-593 610,-593"/>
-<polygon fill="none" stroke="black" points="610,-593 610,-614 787,-614 787,-593 610,-593"/>
-<text text-anchor="start" x="615" y="-601.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · BCrypt</text>
-<polygon fill="white" stroke="transparent" points="413,-572 413,-593 439,-593 439,-572 413,-572"/>
-<polygon fill="none" stroke="black" points="413,-572 413,-593 439,-593 439,-572 413,-572"/>
-<text text-anchor="start" x="418" y="-581" font-family="DejaVu Sans" font-weight="bold" font-size="10.00">FK</text>
-<polygon fill="white" stroke="transparent" points="439,-572 439,-593 610,-593 610,-572 439,-572"/>
-<polygon fill="none" stroke="black" points="439,-572 439,-593 610,-593 610,-572 439,-572"/>
-<text text-anchor="start" x="444" y="-581" font-family="DejaVu Sans" font-size="10.00">role_id </text>
-<text text-anchor="start" x="481" y="-581" font-family="DejaVu Sans" font-size="10.00" fill="#666666">bigint</text>
-<polygon fill="white" stroke="transparent" points="610,-572 610,-593 787,-593 787,-572 610,-572"/>
-<polygon fill="none" stroke="black" points="610,-572 610,-593 787,-593 787,-572 610,-572"/>
-<text text-anchor="start" x="615" y="-580.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL</text>
-<polygon fill="white" stroke="transparent" points="413,-551 413,-572 439,-572 439,-551 413,-551"/>
-<polygon fill="none" stroke="black" points="413,-551 413,-572 439,-572 439,-551 413,-551"/>
-<text text-anchor="start" x="418" y="-559" font-family="DejaVu Sans" font-size="10.00"> </text>
-<polygon fill="white" stroke="transparent" points="439,-551 439,-572 610,-572 610,-551 439,-551"/>
-<polygon fill="none" stroke="black" points="439,-551 439,-572 610,-572 610,-551 439,-551"/>
-<text text-anchor="start" x="444" y="-560" font-family="DejaVu Sans" font-size="10.00">status </text>
-<text text-anchor="start" x="478" y="-560" font-family="DejaVu Sans" font-size="10.00" fill="#666666">varchar(10)</text>
-<polygon fill="white" stroke="transparent" points="610,-551 610,-572 787,-572 787,-551 610,-551"/>
-<polygon fill="none" stroke="black" points="610,-551 610,-572 787,-572 787,-551 610,-551"/>
-<text text-anchor="start" x="615" y="-559.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · ACTIVO | INACTIVO</text>
-<polygon fill="white" stroke="transparent" points="413,-530 413,-551 439,-551 439,-530 413,-530"/>
-<polygon fill="none" stroke="black" points="413,-530 413,-551 439,-551 439,-530 413,-530"/>
-<text text-anchor="start" x="418" y="-538" font-family="DejaVu Sans" font-size="10.00"> </text>
-<polygon fill="white" stroke="transparent" points="439,-530 439,-551 610,-551 610,-530 439,-530"/>
-<polygon fill="none" stroke="black" points="439,-530 439,-551 610,-551 610,-530 439,-530"/>
-<text text-anchor="start" x="444" y="-539" font-family="DejaVu Sans" font-size="10.00">must_change_password </text>
-<text text-anchor="start" x="565" y="-539" font-family="DejaVu Sans" font-size="10.00" fill="#666666">boolean</text>
-<polygon fill="white" stroke="transparent" points="610,-530 610,-551 787,-551 787,-530 610,-530"/>
-<polygon fill="none" stroke="black" points="610,-530 610,-551 787,-551 787,-530 610,-530"/>
-<text text-anchor="start" x="615" y="-538.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · contraseña de primer acceso</text>
-<polygon fill="white" stroke="transparent" points="413,-509 413,-530 439,-530 439,-509 413,-509"/>
-<polygon fill="none" stroke="black" points="413,-509 413,-530 439,-530 439,-509 413,-509"/>
-<text text-anchor="start" x="418" y="-517" font-family="DejaVu Sans" font-size="10.00"> </text>
-<polygon fill="white" stroke="transparent" points="439,-509 439,-530 610,-530 610,-509 439,-509"/>
-<polygon fill="none" stroke="black" points="439,-509 439,-530 610,-530 610,-509 439,-509"/>
-<text text-anchor="start" x="444" y="-518" font-family="DejaVu Sans" font-size="10.00">created_at </text>
-<text text-anchor="start" x="499" y="-518" font-family="DejaVu Sans" font-size="10.00" fill="#666666">timestamp</text>
-<polygon fill="white" stroke="transparent" points="610,-509 610,-530 787,-530 787,-509 610,-509"/>
-<polygon fill="none" stroke="black" points="610,-509 610,-530 787,-530 787,-509 610,-509"/>
-<text text-anchor="start" x="615" y="-517.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL</text>
-<polygon fill="white" stroke="transparent" points="413,-488 413,-509 439,-509 439,-488 413,-488"/>
-<polygon fill="none" stroke="black" points="413,-488 413,-509 439,-509 439,-488 413,-488"/>
-<text text-anchor="start" x="418" y="-496" font-family="DejaVu Sans" font-size="10.00"> </text>
-<polygon fill="white" stroke="transparent" points="439,-488 439,-509 610,-509 610,-488 439,-488"/>
-<polygon fill="none" stroke="black" points="439,-488 439,-509 610,-509 610,-488 439,-488"/>
-<text text-anchor="start" x="444" y="-497" font-family="DejaVu Sans" font-size="10.00">last_login_at </text>
-<text text-anchor="start" x="510" y="-497" font-family="DejaVu Sans" font-size="10.00" fill="#666666">timestamp</text>
-<polygon fill="white" stroke="transparent" points="610,-488 610,-509 787,-509 787,-488 610,-488"/>
-<polygon fill="none" stroke="black" points="610,-488 610,-509 787,-509 787,-488 610,-488"/>
-<text text-anchor="start" x="615" y="-496" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="#1f3864" stroke="transparent" points="407,-677 407,-698 794,-698 794,-677 407,-677"/>
+<polygon fill="none" stroke="black" points="407,-677 407,-698 794,-698 794,-677 407,-677"/>
+<text text-anchor="start" x="574.5" y="-686" font-family="DejaVu Sans" font-weight="bold" font-size="10.00" fill="white">app_user</text>
+<polygon fill="white" stroke="transparent" points="407,-656 407,-677 433,-677 433,-656 407,-656"/>
+<polygon fill="none" stroke="black" points="407,-656 407,-677 433,-677 433,-656 407,-656"/>
+<text text-anchor="start" x="412" y="-665" font-family="DejaVu Sans" font-weight="bold" font-size="10.00">PK</text>
+<polygon fill="white" stroke="transparent" points="433,-656 433,-677 604,-677 604,-656 433,-656"/>
+<polygon fill="none" stroke="black" points="433,-656 433,-677 604,-677 604,-656 433,-656"/>
+<text text-anchor="start" x="438" y="-665" font-family="DejaVu Sans" text-decoration="underline" font-size="10.00">id</text>
+<text text-anchor="start" x="448" y="-665" font-family="DejaVu Sans" font-size="10.00"> </text>
+<text text-anchor="start" x="452" y="-665" font-family="DejaVu Sans" font-size="10.00" fill="#666666">bigserial</text>
+<polygon fill="white" stroke="transparent" points="604,-656 604,-677 794,-677 794,-656 604,-656"/>
+<polygon fill="none" stroke="black" points="604,-656 604,-677 794,-677 794,-656 604,-656"/>
+<text text-anchor="start" x="609" y="-664" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="407,-635 407,-656 433,-656 433,-635 407,-635"/>
+<polygon fill="none" stroke="black" points="407,-635 407,-656 433,-656 433,-635 407,-635"/>
+<text text-anchor="start" x="412" y="-644" font-family="DejaVu Sans" font-weight="bold" font-size="10.00">UK</text>
+<polygon fill="white" stroke="transparent" points="433,-635 433,-656 604,-656 604,-635 433,-635"/>
+<polygon fill="none" stroke="black" points="433,-635 433,-656 604,-656 604,-635 433,-635"/>
+<text text-anchor="start" x="438" y="-644" font-family="DejaVu Sans" font-size="10.00">username </text>
+<text text-anchor="start" x="490" y="-644" font-family="DejaVu Sans" font-size="10.00" fill="#666666">varchar(50)</text>
+<polygon fill="white" stroke="transparent" points="604,-635 604,-656 794,-656 794,-635 604,-635"/>
+<polygon fill="none" stroke="black" points="604,-635 604,-656 794,-656 794,-635 604,-635"/>
+<text text-anchor="start" x="609" y="-643.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · generado al registrarse</text>
+<polygon fill="white" stroke="transparent" points="407,-614 407,-635 433,-635 433,-614 407,-614"/>
+<polygon fill="none" stroke="black" points="407,-614 407,-635 433,-635 433,-614 407,-614"/>
+<text text-anchor="start" x="412" y="-622" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="433,-614 433,-635 604,-635 604,-614 433,-614"/>
+<polygon fill="none" stroke="black" points="433,-614 433,-635 604,-635 604,-614 433,-614"/>
+<text text-anchor="start" x="438" y="-623" font-family="DejaVu Sans" font-size="10.00">password_hash </text>
+<text text-anchor="start" x="517" y="-623" font-family="DejaVu Sans" font-size="10.00" fill="#666666">varchar(100)</text>
+<polygon fill="white" stroke="transparent" points="604,-614 604,-635 794,-635 794,-614 604,-614"/>
+<polygon fill="none" stroke="black" points="604,-614 604,-635 794,-635 794,-614 604,-614"/>
+<text text-anchor="start" x="609" y="-622.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · BCrypt</text>
+<polygon fill="white" stroke="transparent" points="407,-593 407,-614 433,-614 433,-593 407,-593"/>
+<polygon fill="none" stroke="black" points="407,-593 407,-614 433,-614 433,-593 407,-593"/>
+<text text-anchor="start" x="412" y="-602" font-family="DejaVu Sans" font-weight="bold" font-size="10.00">FK</text>
+<polygon fill="white" stroke="transparent" points="433,-593 433,-614 604,-614 604,-593 433,-593"/>
+<polygon fill="none" stroke="black" points="433,-593 433,-614 604,-614 604,-593 433,-593"/>
+<text text-anchor="start" x="438" y="-602" font-family="DejaVu Sans" font-size="10.00">role_id </text>
+<text text-anchor="start" x="475" y="-602" font-family="DejaVu Sans" font-size="10.00" fill="#666666">bigint</text>
+<polygon fill="white" stroke="transparent" points="604,-593 604,-614 794,-614 794,-593 604,-593"/>
+<polygon fill="none" stroke="black" points="604,-593 604,-614 794,-614 794,-593 604,-593"/>
+<text text-anchor="start" x="609" y="-601.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL</text>
+<polygon fill="white" stroke="transparent" points="407,-572 407,-593 433,-593 433,-572 407,-572"/>
+<polygon fill="none" stroke="black" points="407,-572 407,-593 433,-593 433,-572 407,-572"/>
+<text text-anchor="start" x="412" y="-580" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="433,-572 433,-593 604,-593 604,-572 433,-572"/>
+<polygon fill="none" stroke="black" points="433,-572 433,-593 604,-593 604,-572 433,-572"/>
+<text text-anchor="start" x="438" y="-581" font-family="DejaVu Sans" font-size="10.00">status </text>
+<text text-anchor="start" x="472" y="-581" font-family="DejaVu Sans" font-size="10.00" fill="#666666">varchar(10)</text>
+<polygon fill="white" stroke="transparent" points="604,-572 604,-593 794,-593 794,-572 604,-572"/>
+<polygon fill="none" stroke="black" points="604,-572 604,-593 794,-593 794,-572 604,-572"/>
+<text text-anchor="start" x="609" y="-580.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · ACTIVO | INACTIVO | BLOQUEADO</text>
+<polygon fill="white" stroke="transparent" points="407,-551 407,-572 433,-572 433,-551 407,-551"/>
+<polygon fill="none" stroke="black" points="407,-551 407,-572 433,-572 433,-551 407,-551"/>
+<text text-anchor="start" x="412" y="-559" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="433,-551 433,-572 604,-572 604,-551 433,-551"/>
+<polygon fill="none" stroke="black" points="433,-551 433,-572 604,-572 604,-551 433,-551"/>
+<text text-anchor="start" x="438" y="-560" font-family="DejaVu Sans" font-size="10.00">must_change_password </text>
+<text text-anchor="start" x="559" y="-560" font-family="DejaVu Sans" font-size="10.00" fill="#666666">boolean</text>
+<polygon fill="white" stroke="transparent" points="604,-551 604,-572 794,-572 794,-551 604,-551"/>
+<polygon fill="none" stroke="black" points="604,-551 604,-572 794,-572 794,-551 604,-551"/>
+<text text-anchor="start" x="609" y="-559.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · contraseña de primer acceso</text>
+<polygon fill="white" stroke="transparent" points="407,-530 407,-551 433,-551 433,-530 407,-530"/>
+<polygon fill="none" stroke="black" points="407,-530 407,-551 433,-551 433,-530 407,-530"/>
+<text text-anchor="start" x="412" y="-538" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="433,-530 433,-551 604,-551 604,-530 433,-530"/>
+<polygon fill="none" stroke="black" points="433,-530 433,-551 604,-551 604,-530 433,-530"/>
+<text text-anchor="start" x="438" y="-539" font-family="DejaVu Sans" font-size="10.00">failed_login_attempts </text>
+<text text-anchor="start" x="548" y="-539" font-family="DejaVu Sans" font-size="10.00" fill="#666666">int</text>
+<polygon fill="white" stroke="transparent" points="604,-530 604,-551 794,-551 794,-530 604,-530"/>
+<polygon fill="none" stroke="black" points="604,-530 604,-551 794,-551 794,-530 604,-530"/>
+<text text-anchor="start" x="609" y="-538.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL · intentos fallidos seguidos</text>
+<polygon fill="white" stroke="transparent" points="407,-509 407,-530 433,-530 433,-509 407,-509"/>
+<polygon fill="none" stroke="black" points="407,-509 407,-530 433,-530 433,-509 407,-509"/>
+<text text-anchor="start" x="412" y="-517" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="433,-509 433,-530 604,-530 604,-509 433,-509"/>
+<polygon fill="none" stroke="black" points="433,-509 433,-530 604,-530 604,-509 433,-509"/>
+<text text-anchor="start" x="438" y="-518" font-family="DejaVu Sans" font-size="10.00">locked_until </text>
+<text text-anchor="start" x="500" y="-518" font-family="DejaVu Sans" font-size="10.00" fill="#666666">timestamp</text>
+<polygon fill="white" stroke="transparent" points="604,-509 604,-530 794,-530 794,-509 604,-509"/>
+<polygon fill="none" stroke="black" points="604,-509 604,-530 794,-530 794,-509 604,-509"/>
+<text text-anchor="start" x="609" y="-517.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">obligatorio si status = BLOQUEADO</text>
+<polygon fill="white" stroke="transparent" points="407,-488 407,-509 433,-509 433,-488 407,-488"/>
+<polygon fill="none" stroke="black" points="407,-488 407,-509 433,-509 433,-488 407,-488"/>
+<text text-anchor="start" x="412" y="-496" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="433,-488 433,-509 604,-509 604,-488 433,-488"/>
+<polygon fill="none" stroke="black" points="433,-488 433,-509 604,-509 604,-488 433,-488"/>
+<text text-anchor="start" x="438" y="-497" font-family="DejaVu Sans" font-size="10.00">created_at </text>
+<text text-anchor="start" x="493" y="-497" font-family="DejaVu Sans" font-size="10.00" fill="#666666">timestamp</text>
+<polygon fill="white" stroke="transparent" points="604,-488 604,-509 794,-509 794,-488 604,-488"/>
+<polygon fill="none" stroke="black" points="604,-488 604,-509 794,-509 794,-488 604,-488"/>
+<text text-anchor="start" x="609" y="-496.6" font-family="DejaVu Sans" font-size="8.00" fill="#555555">NOT NULL</text>
+<polygon fill="white" stroke="transparent" points="407,-467 407,-488 433,-488 433,-467 407,-467"/>
+<polygon fill="none" stroke="black" points="407,-467 407,-488 433,-488 433,-467 407,-467"/>
+<text text-anchor="start" x="412" y="-475" font-family="DejaVu Sans" font-size="10.00"> </text>
+<polygon fill="white" stroke="transparent" points="433,-467 433,-488 604,-488 604,-467 433,-467"/>
+<polygon fill="none" stroke="black" points="433,-467 433,-488 604,-488 604,-467 433,-467"/>
+<text text-anchor="start" x="438" y="-476" font-family="DejaVu Sans" font-size="10.00">last_login_at </text>
+<text text-anchor="start" x="504" y="-476" font-family="DejaVu Sans" font-size="10.00" fill="#666666">timestamp</text>
+<polygon fill="white" stroke="transparent" points="604,-467 604,-488 794,-488 794,-467 604,-467"/>
+<polygon fill="none" stroke="black" points="604,-467 604,-488 794,-488 794,-467 604,-467"/>
+<text text-anchor="start" x="609" y="-475" font-family="DejaVu Sans" font-size="10.00"> </text>
 </g>
 <!-- role&#45;&gt;app_user -->
 <g id="edge1" class="edge">
 <title>role&#45;&gt;app_user</title>
-<path fill="none" stroke="#333333" stroke-width="1.2" d="M315.21,-583C340.79,-583 367.67,-583 394.28,-583"/>
+<path fill="none" stroke="#333333" stroke-width="1.2" d="M315.38,-583C338.93,-583 363.59,-583 388.11,-583"/>
 <polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="306.06,-588 306.06,-578 308.06,-578 308.06,-588 306.06,-588"/>
 <polyline fill="none" stroke="#333333" stroke-width="1.2" points="305.06,-583 310.06,-583 "/>
 <polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="311.06,-588 311.06,-578 313.06,-578 313.06,-588 311.06,-588"/>
 <polyline fill="none" stroke="#333333" stroke-width="1.2" points="310.06,-583 315.06,-583 "/>
-<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="402.64,-583 412.64,-587.5 407.64,-583 412.64,-583 412.64,-583 412.64,-583 407.64,-583 412.64,-578.5 402.64,-583 402.64,-583"/>
-<ellipse fill="none" stroke="#333333" stroke-width="1.2" cx="398.64" cy="-583" rx="4" ry="4"/>
-<text text-anchor="start" x="324.74" y="-575.8" font-family="DejaVu Sans" font-size="9.00">asigna</text>
+<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="396.37,-583 406.37,-587.5 401.37,-583 406.37,-583 406.37,-583 406.37,-583 401.37,-583 406.37,-578.5 396.37,-583 396.37,-583"/>
+<ellipse fill="none" stroke="#333333" stroke-width="1.2" cx="392.37" cy="-583" rx="4" ry="4"/>
+<text text-anchor="start" x="321.75" y="-575.8" font-family="DejaVu Sans" font-size="9.00">asigna</text>
 </g>
 <!-- client -->
 <g id="node3" class="node">
@@ -298,15 +318,15 @@
 <!-- app_user&#45;&gt;client -->
 <g id="edge2" class="edge">
 <title>app_user&#45;&gt;client</title>
-<path fill="none" stroke="#333333" stroke-width="1.2" d="M797.1,-583C825.27,-583 854.11,-583 881.85,-583"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="788.01,-588 788.01,-578 790.01,-578 790.01,-588 788.01,-588"/>
-<polyline fill="none" stroke="#333333" stroke-width="1.2" points="787.01,-583 792.01,-583 "/>
-<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="793.01,-588 793.01,-578 795.01,-578 795.01,-588 793.01,-588"/>
-<polyline fill="none" stroke="#333333" stroke-width="1.2" points="792.01,-583 797.01,-583 "/>
-<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="893.94,-578 893.94,-588 891.94,-588 891.94,-578 893.94,-578"/>
-<polyline fill="none" stroke="#333333" stroke-width="1.2" points="894.94,-583 889.94,-583 "/>
-<ellipse fill="none" stroke="#333333" stroke-width="1.2" cx="885.94" cy="-583" rx="4" ry="4"/>
-<text text-anchor="start" x="839.47" y="-575.8" font-family="DejaVu Sans" font-size="9.00">corresponde a</text>
+<path fill="none" stroke="#333333" stroke-width="1.2" d="M803.91,-583C829.85,-583 856.24,-583 881.7,-583"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="794.6,-588 794.6,-578 796.6,-578 796.6,-588 794.6,-588"/>
+<polyline fill="none" stroke="#333333" stroke-width="1.2" points="793.6,-583 798.6,-583 "/>
+<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="799.6,-588 799.6,-578 801.6,-578 801.6,-588 799.6,-588"/>
+<polyline fill="none" stroke="#333333" stroke-width="1.2" points="798.6,-583 803.6,-583 "/>
+<polygon fill="#333333" stroke="#333333" stroke-width="1.2" points="893.93,-578 893.93,-588 891.93,-588 891.93,-578 893.93,-578"/>
+<polyline fill="none" stroke="#333333" stroke-width="1.2" points="894.93,-583 889.93,-583 "/>
+<ellipse fill="none" stroke="#333333" stroke-width="1.2" cx="885.93" cy="-583" rx="4" ry="4"/>
+<text text-anchor="start" x="842.81" y="-575.8" font-family="DejaVu Sans" font-size="9.00">corresponde a</text>
 </g>
 <!-- reservation -->
 <g id="node10" class="node">

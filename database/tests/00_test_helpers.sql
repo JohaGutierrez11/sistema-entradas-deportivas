@@ -4,6 +4,7 @@
 -- expect_ok(caso, sql)                 → el SQL debe ejecutarse sin error
 -- expect_violation(caso, sql, regla)   → el SQL debe fallar violando
 --                                         exactamente esa restricción
+-- expect_true(caso, consulta)          → la consulta debe devolver TRUE
 -- Los resultados se acumulan en pg_temp.test_result; report() imprime
 -- el resumen y aborta con error si algún caso falló.
 -- =====================================================================
@@ -39,6 +40,18 @@ BEGIN
                 CASE WHEN v_found = p_rule THEN 'Rechazado por ' || v_found
                      ELSE 'Rechazado por ' || v_found || ', se esperaba ' || p_rule END);
     END;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION pg_temp.expect_true(p_case TEXT, p_query TEXT) RETURNS VOID AS $$
+DECLARE
+    v_result BOOLEAN;
+BEGIN
+    EXECUTE p_query INTO v_result;
+    INSERT INTO pg_temp.test_result VALUES (p_case, COALESCE(v_result, FALSE),
+        CASE WHEN v_result THEN 'OK' ELSE 'La condición no se cumple' END);
+EXCEPTION WHEN OTHERS THEN
+    INSERT INTO pg_temp.test_result VALUES (p_case, FALSE, 'Error: ' || SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 

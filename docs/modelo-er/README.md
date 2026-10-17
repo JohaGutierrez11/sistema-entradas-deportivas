@@ -42,8 +42,10 @@ erDiagram
         varchar username UK "NOT NULL · generado al registrarse"
         varchar password_hash "NOT NULL · BCrypt"
         bigint role_id FK "NOT NULL"
-        varchar status "NOT NULL · ACTIVO | INACTIVO"
+        varchar status "NOT NULL · ACTIVO | INACTIVO | BLOQUEADO"
         boolean must_change_password "NOT NULL · contraseña de primer acceso"
+        int failed_login_attempts "NOT NULL · intentos fallidos seguidos"
+        timestamp locked_until "obligatorio si status = BLOQUEADO"
         timestamp created_at "NOT NULL"
         timestamp last_login_at
     }
@@ -165,6 +167,18 @@ erDiagram
 12. **Id interno + id público.** Todas las tablas usan `id BIGINT` como PK interna: joins rápidos, índices compactos y semillas legibles. `client`, `reservation` y `ticket` agregan `public_id UUID`, el único identificador que viaja en las URLs de la API (`/api/reservations/{public_id}`). Un id secuencial en la URL permite enumerar recursos ajenos (IDOR); el UUID lo impide. El catálogo (estadios, secciones, partidos) es información pública y conserva el `id` numérico en la URL. **El UUID no reemplaza la autorización:** el servicio igual verifica que el recurso pertenezca al usuario del token.
 13. **`reservation.code` es para personas, no para la API.** Un código legible como `RES-2026-000123` es adivinable; sirve para soporte y para el boleto impreso, pero no como identificador en URLs.
 
+14. **La cuenta de usuario tiene tres estados, y cada uno tiene un dueño distinto.** `ACTIVO` es el uso normal. `INACTIVO` lo pone el administrador (baja administrativa) y solo él lo revierte. `BLOQUEADO` lo pone el sistema tras 5 contraseñas incorrectas seguidas (protección contra fuerza bruta) y se libera solo al pasar `locked_until`, o antes si el administrador lo desbloquea. `ck_app_user_locked` obliga a que todo bloqueo tenga fecha de fin. `must_change_password` es una **bandera**, no un estado, porque es independiente: una cuenta puede estar bloqueada y además tener pendiente el cambio de contraseña.
+
+```
+          5 intentos fallidos
+ACTIVO ─────────────────────────> BLOQUEADO
+  ▲  ▲                                │
+  │  └──── pasa locked_until o el ────┘
+  │        admin la desbloquea
+  │
+  └──── admin ────> INACTIVO   (vuelve a ACTIVO solo si el admin la reactiva)
+```
+
 ## Reglas que la base de datos no puede garantizar
 
 Estas reglas se implementan en la capa *Service* de cada microservicio y deben tener casos de prueba en Apidog.
@@ -179,6 +193,9 @@ Estas reglas se implementan en la capa *Service* de cada microservicio y deben t
 | La suma de capacidades de las secciones no supera `stadium.total_capacity` | ms-partidos | `422` |
 | Asiento o partido inexistente al reservar | ms-reservas → ms-partidos | `404` |
 | Usuario inactivo no puede iniciar sesión | ms-usuarios | `403` |
+| 5 contraseñas incorrectas seguidas → `BLOQUEADO` durante 15 minutos; un login exitoso reinicia el contador | ms-usuarios | `401` en cada intento fallido |
+| Usuario bloqueado no puede iniciar sesión hasta que pase `locked_until` | ms-usuarios | `423` |
+| Credenciales incorrectas responden siempre el mismo mensaje genérico, exista o no el usuario (evita la enumeración de usuarios) | ms-usuarios | `401` |
 
 ## Pendientes
 

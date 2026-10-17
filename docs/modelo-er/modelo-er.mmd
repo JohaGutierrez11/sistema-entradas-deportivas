@@ -22,8 +22,10 @@ erDiagram
         varchar username UK "NOT NULL · generado al registrarse"
         varchar password_hash "NOT NULL · BCrypt"
         bigint role_id FK "NOT NULL"
-        varchar status "NOT NULL · ACTIVO | INACTIVO"
+        varchar status "NOT NULL · ACTIVO | INACTIVO | BLOQUEADO"
         boolean must_change_password "NOT NULL · contraseña de primer acceso"
+        int failed_login_attempts "NOT NULL · intentos fallidos seguidos"
+        timestamp locked_until "obligatorio si status = BLOQUEADO"
         timestamp created_at "NOT NULL"
         timestamp last_login_at
     }
