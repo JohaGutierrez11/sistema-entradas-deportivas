@@ -1,0 +1,19 @@
+# Java / Maven
+target/
+*.class
+
+# Node / React
+node_modules/
+dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Variables de entorno (nunca se suben; solo .env.example)
+.env
+
+# Sistema
+.DS_Store
+Thumbs.db
