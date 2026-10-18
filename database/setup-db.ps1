@@ -13,22 +13,50 @@
 
 .EXAMPLE
     cd database
-    .\setup-db.ps1
+    .\setup-db.ps1            # resúmenes por archivo y total general
+    .\setup-db.ps1 -Detail    # además, cada caso PASS
 
     Si PowerShell bloquea el script por la política de ejecución:
     powershell -ExecutionPolicy Bypass -File .\setup-db.ps1
 #>
 param(
     [string]$Container = "pg-entradas",
-    [int]$Port = 5433
+    [int]$Port = 5433,
+    # Muestra cada caso PASS, no solo los resúmenes y los fallos
+    [switch]$Detail
 )
+
+# Mostrar bien tildes y símbolos que devuelve PostgreSQL (UTF-8)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+$script:TotalCases = 0
+$script:TotalPass  = 0
+$script:TotalFail  = 0
 
 $Databases = @("auth_db", "match_db", "reservation_db")
 
 function Invoke-Psql([string]$Database, [string]$File) {
     Write-Host "  -> $Database : $File" -ForegroundColor Cyan
-    docker exec -w /database $Container psql -U postgres -d $Database -q -v ON_ERROR_STOP=1 -f $File
-    if ($LASTEXITCODE -ne 0) {
+    # 2>&1 dentro del contenedor: los NOTICE de las pruebas llegan como texto normal
+    $output = docker exec -w /database $Container sh -c "psql -U postgres -d $Database -q -v ON_ERROR_STOP=1 -f $File 2>&1"
+    $exitCode = $LASTEXITCODE
+
+    foreach ($line in $output) {
+        $text = ("$line" -replace '^psql:\S+ (NOTICE|ERROR):\s+', '').Trim()
+        if (-not $text) { continue }
+        if ($text -match '(\d+) casos\D+(\d+) PASS\D+(\d+) FAIL') {
+            $script:TotalCases += [int]$Matches[1]
+            $script:TotalPass  += [int]$Matches[2]
+            $script:TotalFail  += [int]$Matches[3]
+            Write-Host "     $text" -ForegroundColor Green
+        } elseif ($text -match '^FAIL' -or "$line" -match 'ERROR') {
+            Write-Host "     $text" -ForegroundColor Red
+        } elseif ($Detail) {
+            Write-Host "     $text" -ForegroundColor DarkGray
+        }
+    }
+
+    if ($exitCode -ne 0) {
         Write-Host "ERROR ejecutando $File en $Database" -ForegroundColor Red
         exit 1
     }
@@ -80,4 +108,8 @@ foreach ($db in $Databases) {
     Invoke-Psql $db "tests/${db}_tests.sql"
 }
 
+Write-Host ""
+Write-Host "================================================" -ForegroundColor Green
+Write-Host " TOTAL: $script:TotalCases casos · $script:TotalPass PASS · $script:TotalFail FAIL" -ForegroundColor Green
+Write-Host "================================================" -ForegroundColor Green
 Write-Host "`nListo. Conecta DBeaver a localhost:$Port (usuario postgres / clave postgres)." -ForegroundColor Green
