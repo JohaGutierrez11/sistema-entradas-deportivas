@@ -20,7 +20,7 @@ public class Stadium {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "description", length = 255)
+    @Column(name = "description", length = 250)
     private String description;
 
     @Column(name = "location", nullable = false, length = 200)

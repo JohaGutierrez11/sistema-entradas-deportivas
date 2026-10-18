@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.match.controller;
 import ec.edu.uce.tickets.match.dto.StadiumResponse;
 import ec.edu.uce.tickets.match.service.StadiumService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,5 +22,10 @@ public class StadiumController {
     @GetMapping
     public List<StadiumResponse> findAll() {
         return stadiumService.findAll();
+    }
+
+    @GetMapping("/{stadiumId}")
+    public StadiumResponse findById(@PathVariable Long stadiumId){
+        return stadiumService.findById(stadiumId);
     }
 }
