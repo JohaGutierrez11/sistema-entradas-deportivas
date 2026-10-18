@@ -1,0 +1,693 @@
+openapi: 3.0.3
+info:
+  title: ms-partidos · API de Partidos
+  version: 1.0.0
+  description: |
+    Microservicio de Partidos del Sistema de Gestión de Entradas para eventos deportivos.
+    Administra estadios, secciones, filas, asientos y partidos (HU-06 a HU-09).
+
+    **Contrato diseñado antes del código (design-first).** La implementación en Spring Boot
+    debe cumplirlo; el Swagger generado por springdoc-openapi se compara contra este archivo.
+
+    ## Convenciones
+    - **Prefijo por microservicio**: `/auth-api` (ms-usuarios, puerto 8081), `/match-api`
+      (ms-partidos, puerto 8082) y `/reservation-api` (ms-reservas, puerto 8083). Con solo
+      leer el prefijo se sabe qué servicio responde, sin rutas ambiguas entre servicios.
+    - **Acceso público**: endpoints marcados con `security: []`. No requieren token
+      (el catálogo de partidos es parte del "acceso común" del enunciado).
+    - **ADMIN**: requieren `Authorization: Bearer <JWT>` con rol `ADMIN`.
+      Sin token → `401`; con token de otro rol → `403`.
+    - **Interno**: solo para otros microservicios; requieren el encabezado `X-Internal-Key`.
+    - **Errores**: formato RFC 7807 (`application/problem+json`), igual en todos los servicios.
+    - **Fechas y horas**: hora de Ecuador (UTC-5). Partidos en otros países quedan fuera de alcance.
+    - **Filas y asientos no se crean a mano**: al crear una sección, el servicio genera las
+      filas (A, B, C…) y los asientos (1..n) a partir de `rowCount` y `seatsPerRow`.
+  contact:
+    name: Johanna Gutiérrez
+servers:
+  - url: http://localhost:8082
+    description: Desarrollo local
+
+tags:
+  - name: Estadios
+    description: Escenarios deportivos y su estructura física
+  - name: Secciones
+    description: Localidades de un estadio (PALCOS, GENERAL, PREFERENCIA, TRIBUNAS)
+  - name: Partidos
+    description: Eventos y catálogo con filtros
+  - name: Interno
+    description: Comunicación entre microservicios (no lo usa el front)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ------------------------------------------------------------------ Estadios
+  /match-api/stadiums:
+    get:
+      tags: [Estadios]
+      summary: Listar estadios
+      description: Público. Sirve para el filtro por estadio del catálogo y para la administración.
+      operationId: listStadiums
+      security: []
+      responses:
+        '200':
+          description: Lista de estadios
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StadiumResponse' }
+              example:
+                - { id: 1, name: Estadio Olímpico Atahualpa, description: Escenario principal de Quito, location: 'Av. 6 de Diciembre y Naciones Unidas, Quito', totalCapacity: 35000 }
+                - { id: 2, name: Estadio Rodrigo Paz Delgado, description: Conocido como Casa Blanca, location: 'Av. Diego de Vásquez, Ponceano, Quito', totalCapacity: 41000 }
+    post:
+      tags: [Estadios]
+      summary: Crear estadio
+      description: Solo ADMIN (HU-06).
+      operationId: createStadium
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StadiumRequest' }
+            example: { name: Estadio Olímpico Atahualpa, description: Escenario principal de Quito, location: 'Av. 6 de Diciembre y Naciones Unidas, Quito', totalCapacity: 35000 }
+      responses:
+        '201':
+          description: Estadio creado. El encabezado `Location` apunta al nuevo recurso.
+          headers:
+            Location: { schema: { type: string, example: /match-api/stadiums/6 } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StadiumResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Ya existe un estadio con ese nombre (`uk_stadium_name`)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Conflict, status: 409, detail: 'Ya existe un estadio con el nombre "Estadio Olímpico Atahualpa"', instance: /match-api/stadiums }
+
+  /match-api/stadiums/{stadiumId}:
+    parameters:
+      - $ref: '#/components/parameters/StadiumId'
+    get:
+      tags: [Estadios]
+      summary: Ver un estadio
+      operationId: getStadium
+      security: []
+      responses:
+        '200':
+          description: Estadio
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StadiumResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Estadios]
+      summary: Editar estadio
+      description: |
+        Solo ADMIN. La nueva capacidad total no puede ser menor que la suma de las
+        capacidades de sus secciones (`422`).
+      operationId: updateStadium
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StadiumRequest' }
+      responses:
+        '200':
+          description: Estadio actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StadiumResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Ya existe otro estadio con ese nombre
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+    delete:
+      tags: [Estadios]
+      summary: Eliminar estadio
+      description: |
+        Solo ADMIN. Solo se puede eliminar un estadio sin secciones ni partidos
+        (`ON DELETE RESTRICT`); si los tiene, responde `409`.
+      operationId: deleteStadium
+      responses:
+        '204': { description: Eliminado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: El estadio tiene secciones o partidos asociados
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Conflict, status: 409, detail: 'El estadio tiene 4 secciones y 2 partidos asociados; no se puede eliminar', instance: /match-api/stadiums/1 }
+
+  /match-api/stadiums/{stadiumId}/layout:
+    parameters:
+      - $ref: '#/components/parameters/StadiumId'
+    get:
+      tags: [Estadios]
+      summary: Estructura completa del estadio para el mapa de asientos
+      description: |
+        Público. Devuelve en una sola respuesta las secciones, sus filas y sus asientos,
+        para que el front dibuje el mapa sin hacer llamadas en cadena (evita el problema N+1).
+
+        **No incluye disponibilidad.** La estructura casi nunca cambia y vive en ms-partidos;
+        la disponibilidad cambia cada segundo y vive en ms-reservas
+        (`GET /reservation-api/matches/{matchId}/availability`). El front descarga la estructura una vez
+        y consulta solo la disponibilidad cada pocos segundos.
+      operationId: getStadiumLayout
+      security: []
+      responses:
+        '200':
+          description: Estructura del estadio
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StadiumLayout' }
+              example:
+                stadiumId: 1
+                stadiumName: Estadio Olímpico Atahualpa
+                sections:
+                  - id: 1
+                    name: Palco Occidental
+                    sectionType: PALCOS
+                    rows:
+                      - { id: 1, letter: A, seats: [ { id: 1, number: 1 }, { id: 2, number: 2 }, { id: 3, number: 3 }, { id: 4, number: 4 }, { id: 5, number: 5 } ] }
+                      - { id: 2, letter: B, seats: [ { id: 6, number: 1 }, { id: 7, number: 2 }, { id: 8, number: 3 }, { id: 9, number: 4 }, { id: 10, number: 5 } ] }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------------ Secciones
+  /match-api/stadiums/{stadiumId}/sections:
+    parameters:
+      - $ref: '#/components/parameters/StadiumId'
+    get:
+      tags: [Secciones]
+      summary: Listar las secciones de un estadio
+      operationId: listSections
+      responses:
+        '200':
+          description: Secciones del estadio
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SectionResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Secciones]
+      summary: Crear sección (genera filas y asientos)
+      description: |
+        Solo ADMIN (HU-07). A partir de `rowCount` y `seatsPerRow` el servicio:
+        1. calcula `capacity = rowCount × seatsPerRow`;
+        2. crea las filas con letras consecutivas (A, B, C…);
+        3. crea los asientos numerados de 1 a `seatsPerRow` en cada fila.
+
+        Reglas:
+        - `sectionType` debe ser uno de los 4 tipos del enunciado; otro valor → `400`.
+        - El nombre no puede repetirse dentro del estadio → `409`.
+        - La suma de capacidades de las secciones no puede superar la capacidad total
+          del estadio → `422`.
+      operationId: createSection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SectionRequest' }
+            example: { name: General Sur, description: Graderío popular detrás del arco sur, sectionType: GENERAL, rowCount: 4, seatsPerRow: 12 }
+      responses:
+        '201':
+          description: Sección creada con sus filas y asientos
+          headers:
+            Location: { schema: { type: string, example: /match-api/sections/21 } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SectionResponse' }
+              example: { id: 21, stadiumId: 1, name: General Sur, description: Graderío popular detrás del arco sur, sectionType: GENERAL, rowCount: 4, seatsPerRow: 12, capacity: 48 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Ya existe una sección con ese nombre en el estadio
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: La nueva sección supera la capacidad total del estadio
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'La capacidad de las secciones (35048) superaría la capacidad total del estadio (35000)', instance: /match-api/stadiums/1/sections }
+
+  /match-api/sections/{sectionId}:
+    parameters:
+      - name: sectionId
+        in: path
+        required: true
+        schema: { type: integer, format: int64, minimum: 1 }
+    put:
+      tags: [Secciones]
+      summary: Editar nombre y descripción de una sección
+      description: |
+        Solo ADMIN. Por seguridad no se pueden cambiar las filas ni los asientos de una
+        sección existente: podrían tener entradas vendidas. Para otra distribución,
+        se elimina la sección y se crea una nueva.
+      operationId: updateSection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SectionUpdateRequest' }
+      responses:
+        '200':
+          description: Sección actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SectionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Ya existe otra sección con ese nombre en el estadio
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Secciones]
+      summary: Eliminar sección
+      description: |
+        Solo ADMIN. Elimina la sección con sus filas y asientos. No se permite si el
+        estadio tiene partidos programados o en curso (`409`), porque esos asientos
+        podrían estar reservados en ms-reservas.
+      operationId: deleteSection
+      responses:
+        '204': { description: Eliminada }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: El estadio tiene partidos programados o en curso
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ------------------------------------------------------------------ Partidos
+  /match-api/matches:
+    get:
+      tags: [Partidos]
+      summary: Catálogo de partidos con filtros
+      description: |
+        Público (HU-09). Todos los filtros son opcionales y se combinan con Y lógico.
+        Sin filtros, devuelve los partidos `PROGRAMADO` desde hoy, ordenados por fecha y hora.
+        Sin resultados → `200` con lista vacía, no `404`.
+      operationId: searchMatches
+      security: []
+      parameters:
+        - name: date
+          in: query
+          description: Partidos de una fecha exacta
+          schema: { type: string, format: date, example: '2026-11-07' }
+        - name: name
+          in: query
+          description: Texto contenido en el nombre del partido, sin distinguir mayúsculas
+          schema: { type: string, minLength: 2, maxLength: 100, example: barcelona }
+        - name: stadiumId
+          in: query
+          schema: { type: integer, format: int64, minimum: 1, example: 1 }
+        - name: status
+          in: query
+          description: Por defecto PROGRAMADO
+          schema: { $ref: '#/components/schemas/MatchStatus' }
+      responses:
+        '200':
+          description: Partidos que cumplen los filtros
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MatchResponse' }
+              example:
+                - { id: 1, name: El Nacional vs Barcelona SC, description: LigaPro · Fecha 14, matchDate: '2026-11-07', matchTime: '15:30', status: PROGRAMADO, stadium: { id: 1, name: Estadio Olímpico Atahualpa } }
+                - { id: 3, name: Emelec vs Barcelona SC, description: Clásico del Astillero, matchDate: '2026-11-14', matchTime: '19:00', status: PROGRAMADO, stadium: { id: 4, name: Estadio George Capwell } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Partidos]
+      summary: Crear partido
+      description: |
+        Solo ADMIN (HU-08). El estadio debe existir (`404`). La fecha no puede ser pasada (`422`).
+        Todo partido nuevo se crea en estado `PROGRAMADO`.
+      operationId: createMatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MatchRequest' }
+            example: { name: Liga de Quito vs Emelec, description: LigaPro · Fecha 18, matchDate: '2026-12-05', matchTime: '16:00', stadiumId: 2 }
+      responses:
+        '201':
+          description: Partido creado
+          headers:
+            Location: { schema: { type: string, example: /match-api/matches/7 } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MatchResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: La fecha del partido ya pasó
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'La fecha del partido (2026-10-01) ya pasó', instance: /match-api/matches }
+
+  /match-api/matches/{matchId}:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags: [Partidos]
+      summary: Ver un partido
+      operationId: getMatch
+      security: []
+      responses:
+        '200':
+          description: Partido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MatchResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Partidos]
+      summary: Editar o cambiar el estado de un partido
+      description: |
+        Solo ADMIN. Transiciones de estado permitidas:
+        `PROGRAMADO → EN_CURSO → FINALIZADO` y `PROGRAMADO → CANCELADO`.
+        Cualquier otra (por ejemplo, reabrir un partido FINALIZADO o CANCELADO) → `422`.
+        No se eliminan partidos: se cancelan, para conservar el historial de reservas.
+      operationId: updateMatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MatchUpdateRequest' }
+      responses:
+        '200':
+          description: Partido actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MatchResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Transición de estado no permitida
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'No se puede pasar un partido de FINALIZADO a PROGRAMADO', instance: /match-api/matches/5 }
+
+  # ------------------------------------------------------------------ Interno
+  /match-api/internal/seats/validate:
+    post:
+      tags: [Interno]
+      summary: Validar asientos para una reserva
+      description: |
+        Lo llama **ms-reservas** antes de bloquear asientos. Reemplaza a la FK que no puede
+        existir entre bases de datos distintas.
+
+        Responde `200` siempre que el partido exista, indicando qué asientos son válidos
+        (existen y pertenecen al estadio del partido) y el estado del partido, para que
+        ms-reservas rechace reservas de partidos que no estén `PROGRAMADO`.
+      operationId: validateSeats
+      security:
+        - internalKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeatValidationRequest' }
+            example: { matchId: 1, seatIds: [35, 36, 999] }
+      responses:
+        '200':
+          description: Resultado de la validación
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeatValidationResponse' }
+              example: { matchId: 1, matchStatus: PROGRAMADO, stadiumId: 1, validSeatIds: [35, 36], invalidSeatIds: [999] }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Falta el encabezado X-Internal-Key o no es válido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token emitido por ms-usuarios en el login
+    internalKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Key
+      description: Clave compartida entre microservicios (variable de entorno INTERNAL_API_KEY)
+
+  parameters:
+    StadiumId:
+      name: stadiumId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1, example: 1 }
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1, example: 1 }
+
+  responses:
+    ValidationError:
+      description: Datos de entrada inválidos (Bean Validation sobre el DTO)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: La solicitud tiene campos inválidos
+            instance: /match-api/stadiums
+            errors:
+              - { field: name, message: no debe estar vacío }
+              - { field: totalCapacity, message: debe ser mayor que 0 }
+    Unauthorized:
+      description: Falta el token, es inválido o expiró
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: about:blank, title: Unauthorized, status: 401, detail: Token ausente, inválido o expirado, instance: /match-api/stadiums }
+    Forbidden:
+      description: El token es válido, pero el rol no tiene permiso
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: about:blank, title: Forbidden, status: 403, detail: Se requiere el rol ADMIN, instance: /match-api/stadiums }
+    NotFound:
+      description: El recurso no existe
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: about:blank, title: Not Found, status: 404, detail: No existe el estadio con id 99, instance: /match-api/stadiums/99 }
+    BusinessRule:
+      description: Los datos son válidos, pero violan una regla de negocio
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    # --------------------------------------------------------------- Errores
+    Problem:
+      type: object
+      description: Error en formato RFC 7807 (Problem Details), soportado de forma nativa por Spring Boot 3
+      required: [title, status]
+      properties:
+        type: { type: string, example: about:blank }
+        title: { type: string, example: Bad Request }
+        status: { type: integer, example: 400 }
+        detail: { type: string, example: La solicitud tiene campos inválidos }
+        instance: { type: string, example: /match-api/stadiums }
+        errors:
+          type: array
+          description: Solo en errores de validación (400)
+          items:
+            type: object
+            properties:
+              field: { type: string, example: name }
+              message: { type: string, example: no debe estar vacío }
+
+    # --------------------------------------------------------------- Estadios
+    StadiumRequest:
+      type: object
+      required: [name, location, totalCapacity]
+      properties:
+        name: { type: string, minLength: 3, maxLength: 100, example: Estadio Olímpico Atahualpa }
+        description: { type: string, maxLength: 250, example: Escenario principal de Quito }
+        location: { type: string, minLength: 3, maxLength: 200, example: 'Av. 6 de Diciembre y Naciones Unidas, Quito' }
+        totalCapacity: { type: integer, minimum: 1, maximum: 200000, example: 35000 }
+    StadiumResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        name: { type: string, example: Estadio Olímpico Atahualpa }
+        description: { type: string, example: Escenario principal de Quito }
+        location: { type: string, example: 'Av. 6 de Diciembre y Naciones Unidas, Quito' }
+        totalCapacity: { type: integer, example: 35000 }
+
+    # --------------------------------------------------------------- Secciones
+    SectionType:
+      type: string
+      description: Lista cerrada definida en el enunciado
+      enum: [PALCOS, GENERAL, PREFERENCIA, TRIBUNAS]
+    SectionRequest:
+      type: object
+      required: [name, sectionType, rowCount, seatsPerRow]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 50, example: General Sur }
+        description: { type: string, maxLength: 250, example: Graderío popular detrás del arco sur }
+        sectionType: { $ref: '#/components/schemas/SectionType' }
+        rowCount:
+          type: integer
+          minimum: 1
+          maximum: 26
+          description: Número de filas. Se nombran A, B, C… (máximo 26, de A a Z)
+          example: 4
+        seatsPerRow: { type: integer, minimum: 1, maximum: 100, example: 12 }
+    SectionUpdateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 50, example: General Sur Alta }
+        description: { type: string, maxLength: 250 }
+    SectionResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        stadiumId: { type: integer, format: int64, example: 1 }
+        name: { type: string, example: Palco Occidental }
+        description: { type: string, example: Palcos privados con vista central }
+        sectionType: { $ref: '#/components/schemas/SectionType' }
+        rowCount: { type: integer, example: 2 }
+        seatsPerRow: { type: integer, example: 5 }
+        capacity: { type: integer, description: rowCount × seatsPerRow, example: 10 }
+
+    # --------------------------------------------------------------- Mapa
+    StadiumLayout:
+      type: object
+      properties:
+        stadiumId: { type: integer, format: int64 }
+        stadiumName: { type: string }
+        sections:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer, format: int64 }
+              name: { type: string }
+              sectionType: { $ref: '#/components/schemas/SectionType' }
+              rows:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer, format: int64 }
+                    letter: { type: string, pattern: '^[A-Z]{1,2}$' }
+                    seats:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id: { type: integer, format: int64, description: Este id es el que se envía a ms-reservas }
+                          number: { type: integer }
+
+    # --------------------------------------------------------------- Partidos
+    MatchStatus:
+      type: string
+      enum: [PROGRAMADO, EN_CURSO, FINALIZADO, CANCELADO]
+    MatchRequest:
+      type: object
+      required: [name, matchDate, matchTime, stadiumId]
+      properties:
+        name: { type: string, minLength: 3, maxLength: 100, example: Liga de Quito vs Emelec }
+        description: { type: string, maxLength: 250, example: LigaPro · Fecha 18 }
+        matchDate: { type: string, format: date, example: '2026-12-05' }
+        matchTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Hora de Ecuador en formato 24 h (HH:mm)
+          example: '16:00'
+        stadiumId: { type: integer, format: int64, minimum: 1, example: 2 }
+    MatchUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/MatchRequest'
+        - type: object
+          required: [status]
+          properties:
+            status: { $ref: '#/components/schemas/MatchStatus' }
+    MatchResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        name: { type: string, example: El Nacional vs Barcelona SC }
+        description: { type: string, example: LigaPro · Fecha 14 }
+        matchDate: { type: string, format: date, example: '2026-11-07' }
+        matchTime: { type: string, example: '15:30' }
+        status: { $ref: '#/components/schemas/MatchStatus' }
+        stadium:
+          type: object
+          properties:
+            id: { type: integer, format: int64, example: 1 }
+            name: { type: string, example: Estadio Olímpico Atahualpa }
+
+    # --------------------------------------------------------------- Interno
+    SeatValidationRequest:
+      type: object
+      required: [matchId, seatIds]
+      properties:
+        matchId: { type: integer, format: int64, minimum: 1, example: 1 }
+        seatIds:
+          type: array
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          items: { type: integer, format: int64, minimum: 1 }
+          example: [35, 36, 37]
+    SeatValidationResponse:
+      type: object
+      properties:
+        matchId: { type: integer, format: int64 }
+        matchStatus: { $ref: '#/components/schemas/MatchStatus' }
+        stadiumId: { type: integer, format: int64 }
+        validSeatIds:
+          type: array
+          items: { type: integer, format: int64 }
+        invalidSeatIds:
+          type: array
+          description: Asientos que no existen o no pertenecen al estadio del partido
+          items: { type: integer, format: int64 }
