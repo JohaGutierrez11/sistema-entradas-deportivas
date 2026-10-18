@@ -34,6 +34,16 @@ cd database
 
 El script crea el contenedor `pg-entradas` (PostgreSQL 16 en el puerto **5433**), crea las tres bases, las tablas, carga las semillas y corre las 106 pruebas. Se puede ejecutar todas las veces que haga falta: recarga los datos desde cero.
 
+Al final muestra un total general:
+
+```
+================================================
+ TOTAL: 106 casos · 106 PASS · 0 FAIL
+================================================
+```
+
+Con `.\setup-db.ps1 -Detail` muestra además cada caso `PASS`; sin esa opción, solo los resúmenes por archivo y los fallos.
+
 Si Windows bloquea el script: `powershell -ExecutionPolicy Bypass -File .\setup-db.ps1`
 
 ### Manejo del contenedor

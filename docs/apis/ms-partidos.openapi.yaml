@@ -13,6 +13,10 @@ info:
     - **Prefijo por microservicio**: `/auth-api` (ms-usuarios, puerto 8081), `/match-api`
       (ms-partidos, puerto 8082) y `/reservation-api` (ms-reservas, puerto 8083). Con solo
       leer el prefijo se sabe qué servicio responde, sin rutas ambiguas entre servicios.
+    - **Versión después del prefijo** (`/match-api/v1/...`): cada microservicio versiona su
+      contrato por separado. Solo un cambio que rompe (eliminar o renombrar un campo, cambiar
+      su tipo, volver obligatorio un campo opcional) obliga a publicar `v2`; agregar campos,
+      endpoints o filtros opcionales no cambia la versión.
     - **Acceso público**: endpoints marcados con `security: []`. No requieren token
       (el catálogo de partidos es parte del "acceso común" del enunciado).
     - **ADMIN**: requieren `Authorization: Bearer <JWT>` con rol `ADMIN`.
@@ -43,7 +47,7 @@ security:
 
 paths:
   # ------------------------------------------------------------------ Estadios
-  /match-api/stadiums:
+  /match-api/v1/stadiums:
     get:
       tags: [Estadios]
       summary: Listar estadios
@@ -76,7 +80,7 @@ paths:
         '201':
           description: Estadio creado. El encabezado `Location` apunta al nuevo recurso.
           headers:
-            Location: { schema: { type: string, example: /match-api/stadiums/6 } }
+            Location: { schema: { type: string, example: /match-api/v1/stadiums/6 } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/StadiumResponse' }
@@ -88,9 +92,9 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-              example: { type: about:blank, title: Conflict, status: 409, detail: 'Ya existe un estadio con el nombre "Estadio Olímpico Atahualpa"', instance: /match-api/stadiums }
+              example: { type: about:blank, title: Conflict, status: 409, detail: 'Ya existe un estadio con el nombre "Estadio Olímpico Atahualpa"', instance: /match-api/v1/stadiums }
 
-  /match-api/stadiums/{stadiumId}:
+  /match-api/v1/stadiums/{stadiumId}:
     parameters:
       - $ref: '#/components/parameters/StadiumId'
     get:
@@ -150,9 +154,9 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-              example: { type: about:blank, title: Conflict, status: 409, detail: 'El estadio tiene 4 secciones y 2 partidos asociados; no se puede eliminar', instance: /match-api/stadiums/1 }
+              example: { type: about:blank, title: Conflict, status: 409, detail: 'El estadio tiene 4 secciones y 2 partidos asociados; no se puede eliminar', instance: /match-api/v1/stadiums/1 }
 
-  /match-api/stadiums/{stadiumId}/layout:
+  /match-api/v1/stadiums/{stadiumId}/layout:
     parameters:
       - $ref: '#/components/parameters/StadiumId'
     get:
@@ -164,7 +168,7 @@ paths:
 
         **No incluye disponibilidad.** La estructura casi nunca cambia y vive en ms-partidos;
         la disponibilidad cambia cada segundo y vive en ms-reservas
-        (`GET /reservation-api/matches/{matchId}/availability`). El front descarga la estructura una vez
+        (`GET /reservation-api/v1/matches/{matchId}/availability`). El front descarga la estructura una vez
         y consulta solo la disponibilidad cada pocos segundos.
       operationId: getStadiumLayout
       security: []
@@ -187,7 +191,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------------------------------------------------ Secciones
-  /match-api/stadiums/{stadiumId}/sections:
+  /match-api/v1/stadiums/{stadiumId}/sections:
     parameters:
       - $ref: '#/components/parameters/StadiumId'
     get:
@@ -230,7 +234,7 @@ paths:
         '201':
           description: Sección creada con sus filas y asientos
           headers:
-            Location: { schema: { type: string, example: /match-api/sections/21 } }
+            Location: { schema: { type: string, example: /match-api/v1/sections/21 } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SectionResponse' }
@@ -249,9 +253,9 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'La capacidad de las secciones (35048) superaría la capacidad total del estadio (35000)', instance: /match-api/stadiums/1/sections }
+              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'La capacidad de las secciones (35048) superaría la capacidad total del estadio (35000)', instance: /match-api/v1/stadiums/1/sections }
 
-  /match-api/sections/{sectionId}:
+  /match-api/v1/sections/{sectionId}:
     parameters:
       - name: sectionId
         in: path
@@ -305,7 +309,7 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
 
   # ------------------------------------------------------------------ Partidos
-  /match-api/matches:
+  /match-api/v1/matches:
     get:
       tags: [Partidos]
       summary: Catálogo de partidos con filtros
@@ -360,7 +364,7 @@ paths:
         '201':
           description: Partido creado
           headers:
-            Location: { schema: { type: string, example: /match-api/matches/7 } }
+            Location: { schema: { type: string, example: /match-api/v1/matches/7 } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MatchResponse' }
@@ -373,9 +377,9 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'La fecha del partido (2026-10-01) ya pasó', instance: /match-api/matches }
+              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'La fecha del partido (2026-10-01) ya pasó', instance: /match-api/v1/matches }
 
-  /match-api/matches/{matchId}:
+  /match-api/v1/matches/{matchId}:
     parameters:
       - $ref: '#/components/parameters/MatchId'
     get:
@@ -419,10 +423,10 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'No se puede pasar un partido de FINALIZADO a PROGRAMADO', instance: /match-api/matches/5 }
+              example: { type: about:blank, title: Unprocessable Entity, status: 422, detail: 'No se puede pasar un partido de FINALIZADO a PROGRAMADO', instance: /match-api/v1/matches/5 }
 
   # ------------------------------------------------------------------ Interno
-  /match-api/internal/seats/validate:
+  /match-api/v1/internal/seats/validate:
     post:
       tags: [Interno]
       summary: Validar asientos para una reserva
@@ -493,7 +497,7 @@ components:
             title: Bad Request
             status: 400
             detail: La solicitud tiene campos inválidos
-            instance: /match-api/stadiums
+            instance: /match-api/v1/stadiums
             errors:
               - { field: name, message: no debe estar vacío }
               - { field: totalCapacity, message: debe ser mayor que 0 }
@@ -502,19 +506,19 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
-          example: { type: about:blank, title: Unauthorized, status: 401, detail: Token ausente, inválido o expirado, instance: /match-api/stadiums }
+          example: { type: about:blank, title: Unauthorized, status: 401, detail: Token ausente, inválido o expirado, instance: /match-api/v1/stadiums }
     Forbidden:
       description: El token es válido, pero el rol no tiene permiso
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
-          example: { type: about:blank, title: Forbidden, status: 403, detail: Se requiere el rol ADMIN, instance: /match-api/stadiums }
+          example: { type: about:blank, title: Forbidden, status: 403, detail: Se requiere el rol ADMIN, instance: /match-api/v1/stadiums }
     NotFound:
       description: El recurso no existe
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
-          example: { type: about:blank, title: Not Found, status: 404, detail: No existe el estadio con id 99, instance: /match-api/stadiums/99 }
+          example: { type: about:blank, title: Not Found, status: 404, detail: No existe el estadio con id 99, instance: /match-api/v1/stadiums/99 }
     BusinessRule:
       description: Los datos son válidos, pero violan una regla de negocio
       content:
@@ -532,7 +536,7 @@ components:
         title: { type: string, example: Bad Request }
         status: { type: integer, example: 400 }
         detail: { type: string, example: La solicitud tiene campos inválidos }
-        instance: { type: string, example: /match-api/stadiums }
+        instance: { type: string, example: /match-api/v1/stadiums }
         errors:
           type: array
           description: Solo en errores de validación (400)
