@@ -75,7 +75,7 @@ public class StadiumService {
 
         stadium.setName(name);
         stadium.setDescription(request.description());
-        stadium.setLocation(request.location());
+        stadium.setLocation(request.location().trim());
         stadium.setTotalCapacity(request.totalCapacity());
 
         return StadiumResponse.from(stadium);
