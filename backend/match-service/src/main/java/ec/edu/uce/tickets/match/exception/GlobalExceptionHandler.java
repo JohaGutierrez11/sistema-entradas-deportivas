@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.sql.SQLException;
@@ -82,5 +83,25 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         + "(comas, comillas, llaves) y que fechas y horas tengan el formato 2026-12-05 y 08:00");
         return handleExceptionInternal(ex, problem, headers, status, request);
     }
+
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(
+            HandlerMethodValidationException ex, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+
+        List<FieldErrorResponse> errors = ex.getParameterValidationResults().stream()
+                .flatMap(result -> result.getResolvableErrors().stream()
+                        .map(error -> new FieldErrorResponse(
+                                result.getMethodParameter().getParameterName(),
+                                error.getDefaultMessage())))
+                .toList();
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "La solicitud tiene parámetros inválidos");
+        problem.setProperty("errors", errors);
+
+        return handleExceptionInternal(ex, problem, headers, status, request);
+    }
+
 
 }
