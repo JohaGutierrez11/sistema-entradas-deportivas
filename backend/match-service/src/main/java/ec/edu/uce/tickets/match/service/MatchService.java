@@ -10,12 +10,18 @@ import ec.edu.uce.tickets.match.exception.BusinessRuleException;
 import ec.edu.uce.tickets.match.exception.ResourceNotFoundException;
 import ec.edu.uce.tickets.match.repository.MatchRepository;
 import ec.edu.uce.tickets.match.repository.StadiumRepository;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.criteria.Predicate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class MatchService {
@@ -106,5 +112,43 @@ public class MatchService {
         match.setStatus(next);
 
         return MatchResponse.from(match);   // dirty checking: no hace falta save()
+    }
+
+    @Transactional(readOnly = true)
+    public List<MatchResponse> search(LocalDate date, String name, Long stadiumId, MatchStatus status) {
+        MatchStatus effectiveStatus = (status != null) ? status : MatchStatus.PROGRAMADO;
+
+        Specification<SportMatch> spec = (root, query, cb) -> {
+            root.fetch("stadium");   // trae el estadio en la MISMA consulta (evita N+1)
+
+            List<Predicate> filters = new ArrayList<>();
+
+            // Estado: siempre se filtra (por defecto PROGRAMADO)
+            filters.add(cb.equal(root.get("status"), effectiveStatus));
+
+            // Fecha exacta; si no viene y buscamos programados, solo desde hoy
+            if (date != null) {
+                filters.add(cb.equal(root.get("matchDate"), date));
+            } else if (effectiveStatus == MatchStatus.PROGRAMADO) {
+                filters.add(cb.greaterThanOrEqualTo(root.<LocalDate>get("matchDate"), LocalDate.now(ECUADOR)));
+            }
+
+            // Nombre: "contiene", sin distinguir mayúsculas
+            if (name != null && !name.isBlank()) {
+                filters.add(cb.like(cb.lower(root.<String>get("name")),
+                        "%" + name.trim().toLowerCase() + "%"));
+            }
+
+            // Estadio
+            if (stadiumId != null) {
+                filters.add(cb.equal(root.get("stadium").get("id"), stadiumId));
+            }
+
+            return cb.and(filters.toArray(new Predicate[0]));
+        };
+
+        return matchRepository.findAll(spec, Sort.by("matchDate", "matchTime")).stream()
+                .map(MatchResponse::from)
+                .toList();
     }
 }
