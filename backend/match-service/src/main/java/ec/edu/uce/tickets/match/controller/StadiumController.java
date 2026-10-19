@@ -4,6 +4,7 @@ import ec.edu.uce.tickets.match.dto.StadiumRequest;
 import ec.edu.uce.tickets.match.dto.StadiumResponse;
 import ec.edu.uce.tickets.match.service.StadiumService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -39,5 +40,17 @@ public class StadiumController {
                 .buildAndExpand(created.id())
                 .toUri();
         return ResponseEntity.created(location).body(created);
+    }
+
+    @PutMapping("/{stadiumId}")
+    public StadiumResponse update(@PathVariable Long stadiumId,
+                                  @Valid @RequestBody StadiumRequest request){
+        return stadiumService.update(stadiumId, request);
+    }
+
+    @DeleteMapping("/{stadiumId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long stadiumId){
+        stadiumService.delete(stadiumId);
     }
 }
