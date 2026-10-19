@@ -43,7 +43,6 @@ public class StadiumService {
         }
 
         Stadium stadium = new Stadium();
-        stadium.setName(request.name().trim());
         stadium.setDescription(request.description());
         stadium.setLocation(request.location().trim());
         stadium.setTotalCapacity(request.totalCapacity());

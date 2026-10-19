@@ -13,6 +13,6 @@ public record StadiumRequest(
         @Pattern(regexp = "^[\\p{L}\\p{N} .,'()&#/°-]+$",
                 message = "solo admite letras, números, espacios y . , ' ( ) & # / ° -")
         String location,
-        @NotNull @Min(1) @Max(2000000) Integer totalCapacity
+        @NotNull @Min(1) @Max(200000) Integer totalCapacity
 ) {
 }
