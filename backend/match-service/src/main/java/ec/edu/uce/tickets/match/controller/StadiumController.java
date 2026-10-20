@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.match.controller;
 import ec.edu.uce.tickets.match.dto.StadiumRequest;
 import ec.edu.uce.tickets.match.dto.StadiumResponse;
 import ec.edu.uce.tickets.match.service.StadiumService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 
+@Tag(name = "Estadios")
 @RestController
 @RequestMapping("/match-api/v1/stadiums")
 public class StadiumController {

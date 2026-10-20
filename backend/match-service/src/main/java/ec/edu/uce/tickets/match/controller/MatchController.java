@@ -5,6 +5,7 @@ import ec.edu.uce.tickets.match.dto.MatchResponse;
 import ec.edu.uce.tickets.match.dto.MatchUpdateRequest;
 import ec.edu.uce.tickets.match.entity.MatchStatus;
 import ec.edu.uce.tickets.match.service.MatchService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -17,6 +18,7 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 
+@Tag(name = "Partidos")
 @RestController
 @RequestMapping("/match-api/v1/matches")
 public class MatchController {
