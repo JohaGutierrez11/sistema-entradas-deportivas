@@ -1,0 +1,466 @@
+openapi: 3.0.3
+info:
+  title: auth-service · API de Usuarios y Autenticación
+  version: 1.0.0
+  description: |
+    Microservicio de Usuarios y Autenticación del Sistema de Gestión de Entradas para eventos
+    deportivos. Registra clientes, emite el token JWT y administra usuarios y roles
+    (HU-10 a HU-13).
+
+    **Contrato escrito a partir de la implementación (puerto 8081, base `auth_db`).**
+    El Swagger generado por springdoc-openapi (`/swagger-ui.html`) se compara contra este archivo.
+
+    ## Cómo funciona la autenticación
+    1. El cliente se registra (`POST /auth/register`). El servicio genera su **usuario** y una
+       **contraseña de primer acceso** y se los envía por correo. La contraseña nunca viaja en la
+       respuesta HTTP.
+    2. Inicia sesión (`POST /auth/login`) y recibe un **JWT** firmado con HS256, válido 60 minutos.
+    3. En cada petición protegida envía el encabezado `Authorization: Bearer <accessToken>`.
+       `match-service` y `reservation-service` verifican la firma por su cuenta, sin llamar a
+       este servicio.
+
+    **Contenido del token** (firmado, no cifrado: no lleva datos sensibles):
+
+    | Claim | Ejemplo | Uso |
+    |---|---|---|
+    | `sub` | `mlopez` | Usuario |
+    | `role` | `CLIENTE` | Autorización por rol (`ROLE_CLIENTE`) |
+    | `userId` | `2` | Id interno del usuario |
+    | `clientId` | `1` | Id del cliente; solo para el rol CLIENTE. Lo usa reservation-service |
+    | `iss`, `iat`, `exp` | | Emisor, emisión y vencimiento |
+
+    ## Reglas de seguridad
+    - **Mensaje genérico**: usuario inexistente y contraseña incorrecta responden igual (`401`),
+      para no revelar qué usuarios existen.
+    - **Bloqueo temporal**: 5 intentos fallidos seguidos → cuenta `BLOQUEADO` por 15 minutos
+      (`423`). Se desbloquea sola al vencer el plazo o cuando un ADMIN la activa.
+    - **Cuenta o rol inactivos** → `403`, solo después de verificar la contraseña.
+    - **Contraseñas**: solo se guarda el hash BCrypt.
+
+    ## Convenciones
+    - Prefijo `/auth-api/v1`, igual que `/match-api/v1` y `/reservation-api/v1`.
+    - Errores en formato RFC 7807 (`application/problem+json`); los de validación incluyen la
+      lista `errors` con el campo y el mensaje. Mensajes siempre en español.
+    - `401`/`403` de endpoints protegidos los responde Spring Security sin cuerpo, con el
+      encabezado `WWW-Authenticate: Bearer`.
+
+    ## Cómo probar en Apidog
+    1. Ejecuta `POST /auth/login` con `admin` / `Admin2026*`.
+    2. En **Post Processors → Extract Variable** guarda `$.accessToken` en la variable `token`.
+    3. En las demás peticiones usa **Auth → Bearer Token** con `{{token}}`.
+
+    Credenciales de desarrollo: `database/README.md`.
+  contact:
+    name: Johanna Gutiérrez
+servers:
+  - url: http://localhost:8081
+    description: Desarrollo local
+
+tags:
+  - name: Autenticación
+    description: Registro, inicio de sesión y cambio de contraseña
+  - name: Administración
+    description: Usuarios y roles (solo ADMIN)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ------------------------------------------------------------------ Autenticación
+  /auth-api/v1/auth/register:
+    post:
+      tags: [Autenticación]
+      summary: Registrar cliente
+      description: |
+        Público (HU-10). Crea el cliente con rol CLIENTE y estado ACTIVO, y le envía por correo
+        el usuario y la contraseña de primer acceso (`mustChangePassword = true`).
+
+        **Usuario generado**: inicial del primer nombre + primer apellido, en minúsculas, sin
+        tildes, espacios ni símbolos. Si ya existe, se agrega un número (`mlopez2`, `mlopez3`…).
+        Si queda con menos de 4 caracteres, también se agrega un número (`ali2`).
+
+        **Validaciones**:
+        - `cedula`: cédula ecuatoriana válida (10 dígitos, provincia 01–24 o 30, tercer dígito
+          menor que 6 y dígito verificador módulo 10).
+        - `phone`: celular `09XXXXXXXX`, fijo `0[2-7]XXXXXXX` o los mismos con `+593`.
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+            example:
+              firstName: Yuliza
+              lastName: Yajazma
+              cedula: '1750000018'
+              nationality: Ecuatoriana
+              address: Av. América y Mariana de Jesús, Quito
+              phone: '0991234567'
+              email: yuliza.yajazma@test.com
+      responses:
+        '201':
+          description: Cliente registrado. Las credenciales se enviaron al correo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegisterResponse' }
+              example:
+                publicId: 3f6c2a4e-8b1d-4f0a-9c7e-2d5b8a1e6f90
+                username: yyajazma
+                email: yuliza.yajazma@test.com
+                message: Te enviamos tus credenciales de acceso al correo yuliza.yajazma@test.com
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: Ya existe un cliente con esa cédula o ese correo
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Conflict, status: 409, detail: Ya existe un cliente registrado con esa cédula, instance: /auth-api/v1/auth/register }
+
+  /auth-api/v1/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      description: |
+        Público (HU-11). Devuelve el JWT si las credenciales son correctas.
+
+        | Situación | Respuesta |
+        |---|---|
+        | Usuario inexistente o contraseña incorrecta | `401` con mensaje genérico; suma un intento fallido |
+        | 5.º intento fallido seguido | `401` y la cuenta pasa a `BLOQUEADO` por 15 min |
+        | Cuenta bloqueada y dentro del plazo | `423` (no se revisa la contraseña) |
+        | Contraseña correcta, cuenta o rol inactivos | `403` |
+        | Éxito | `200`; reinicia el contador y registra `lastLoginAt` |
+
+        Si `mustChangePassword` es `true`, el front debe llevar al usuario a
+        `POST /auth/change-password` antes de continuar.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example: { username: mlopez, password: 'Cliente2026*' }
+      responses:
+        '200':
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhdXRoLXNlcnZpY2UiLCJzdWIiOiJtbG9wZXoiLCJyb2xlIjoiQ0xJRU5URSJ9.firma
+                tokenType: Bearer
+                expiresIn: 3600
+                username: mlopez
+                role: CLIENTE
+                mustChangePassword: false
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Usuario o contraseña incorrectos (mensaje genérico)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Unauthorized, status: 401, detail: Usuario o contraseña incorrectos, instance: /auth-api/v1/auth/login }
+        '403':
+          description: La cuenta o su rol están inactivos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Forbidden, status: 403, detail: La cuenta está inactiva. Comuníquese con el administrador, instance: /auth-api/v1/auth/login }
+        '423':
+          description: Cuenta bloqueada por intentos fallidos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Locked, status: 423, detail: La cuenta está bloqueada por intentos fallidos hasta las 21:20, instance: /auth-api/v1/auth/login }
+
+  /auth-api/v1/auth/change-password:
+    post:
+      tags: [Autenticación]
+      summary: Cambiar la contraseña
+      description: |
+        Usuario autenticado (cualquier rol). Cambia la contraseña del usuario **del token**
+        (`sub`); el body no indica de quién es, para que nadie pueda cambiar la de otro.
+        Deja `mustChangePassword = false`.
+
+        Política: 8 a 64 caracteres, con al menos una minúscula, una mayúscula, un número
+        y un símbolo.
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+            example: { currentPassword: 'Cliente2026*', newPassword: 'NuevaClave2026#' }
+      responses:
+        '204': { description: Contraseña actualizada }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: La contraseña actual no es correcta, o la nueva es igual a la actual
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Unprocessable Content, status: 422, detail: La contraseña actual no es correcta, instance: /auth-api/v1/auth/change-password }
+
+  # ------------------------------------------------------------------ Administración
+  /auth-api/v1/users:
+    get:
+      tags: [Administración]
+      summary: Listar usuarios
+      description: Solo ADMIN (HU-12). Ordenados por id. No incluye el hash de la contraseña.
+      operationId: listUsers
+      responses:
+        '200':
+          description: Usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/UserResponse' }
+              example:
+                - { id: 1, username: admin, role: ADMIN, status: ACTIVO, mustChangePassword: false, failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: '2026-10-17T09:15:00' }
+                - { id: 8, username: pbravo, role: CLIENTE, status: BLOQUEADO, mustChangePassword: false, failedLoginAttempts: 5, lockedUntil: '2026-10-19T21:20:00', lastLoginAt: '2026-10-14T21:05:00' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /auth-api/v1/users/{userId}/status:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { type: integer, format: int64, minimum: 1 }
+    patch:
+      tags: [Administración]
+      summary: Activar o desactivar un usuario
+      description: |
+        Solo ADMIN (HU-12).
+        - `ACTIVO` también **desbloquea**: reinicia los intentos fallidos y `lockedUntil`.
+        - `INACTIVO`: el usuario ya no puede iniciar sesión (`403`).
+        - `BLOQUEADO` no se asigna a mano: lo pone el sistema → `422`.
+        - Un ADMIN no puede desactivar su propia cuenta → `422`.
+      operationId: updateUserStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserStatusRequest' }
+            example: { status: INACTIVO }
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+
+  /auth-api/v1/roles:
+    get:
+      tags: [Administración]
+      summary: Listar roles
+      description: Solo ADMIN (HU-12).
+      operationId: listRoles
+      responses:
+        '200':
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RoleResponse' }
+              example:
+                - { id: 1, name: ADMIN, description: 'Acceso completo: usuarios, catálogo, reservas y reportes', status: ACTIVO }
+                - { id: 2, name: CLIENTE, description: Consulta partidos, reserva entradas y ve sus boletos, status: ACTIVO }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /auth-api/v1/roles/{roleId}/status:
+    parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema: { type: integer, format: int64, minimum: 1 }
+    patch:
+      tags: [Administración]
+      summary: Activar o desactivar un rol
+      description: |
+        Solo ADMIN (HU-12). Con el rol inactivo, sus usuarios no pueden iniciar sesión (`403`).
+        El rol ADMIN no se puede desactivar → `422`.
+      operationId: updateRoleStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoleStatusRequest' }
+            example: { status: INACTIVO }
+      responses:
+        '200':
+          description: Rol actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/BusinessRule' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token obtenido en `POST /auth-api/v1/auth/login`
+
+  responses:
+    ValidationError:
+      description: Datos de entrada inválidos (Bean Validation sobre el DTO)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: La solicitud tiene campos inválidos
+            instance: /auth-api/v1/auth/register
+            errors:
+              - { field: cedula, message: no es una cédula ecuatoriana válida }
+              - { field: phone, message: 'debe ser un celular (09XXXXXXXX) o un fijo (0XXXXXXXX) ecuatoriano, con o sin +593' }
+    Unauthorized:
+      description: Sin token, o token inválido o vencido. Sin cuerpo; encabezado `WWW-Authenticate`.
+      headers:
+        WWW-Authenticate: { schema: { type: string, example: Bearer } }
+    Forbidden:
+      description: El token es válido, pero el rol no tiene permiso (se requiere ADMIN). Sin cuerpo.
+    NotFound:
+      description: El recurso no existe
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: about:blank, title: Not Found, status: 404, detail: No existe el usuario con el id 99, instance: /auth-api/v1/users/99/status }
+    BusinessRule:
+      description: Los datos son válidos, pero violan una regla de negocio
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: about:blank, title: Unprocessable Content, status: 422, detail: Un administrador no puede desactivar su propia cuenta, instance: /auth-api/v1/users/1/status }
+
+  schemas:
+    Problem:
+      type: object
+      description: Error en formato RFC 7807 (Problem Details)
+      required: [title, status]
+      properties:
+        type: { type: string, example: about:blank }
+        title: { type: string, example: Bad Request }
+        status: { type: integer, example: 400 }
+        detail: { type: string, example: La solicitud tiene campos inválidos }
+        instance: { type: string, example: /auth-api/v1/auth/register }
+        errors:
+          type: array
+          description: Solo en errores de validación (400)
+          items:
+            type: object
+            properties:
+              field: { type: string, example: cedula }
+              message: { type: string, example: no es una cédula ecuatoriana válida }
+
+    UserStatus:
+      type: string
+      enum: [ACTIVO, INACTIVO, BLOQUEADO]
+    RoleStatus:
+      type: string
+      enum: [ACTIVO, INACTIVO]
+
+    RegisterRequest:
+      type: object
+      required: [firstName, lastName, cedula, nationality, address, phone, email]
+      properties:
+        firstName: { type: string, maxLength: 50, pattern: "^[\\p{L} '-]+$", example: Yuliza }
+        middleName: { type: string, maxLength: 50, pattern: "^[\\p{L} '-]*$", example: Andrea }
+        lastName: { type: string, maxLength: 50, pattern: "^[\\p{L} '-]+$", example: Yajazma }
+        cedula:
+          type: string
+          pattern: '^[0-9]{10}$'
+          description: Cédula ecuatoriana válida (dígito verificador módulo 10)
+          example: '1750000018'
+        nationality: { type: string, maxLength: 50, example: Ecuatoriana }
+        address: { type: string, maxLength: 200, example: 'Av. América y Mariana de Jesús, Quito' }
+        phone:
+          type: string
+          pattern: '^(09\d{8}|0[2-7]\d{7}|\+5939\d{8}|\+593[2-7]\d{7})$'
+          example: '0991234567'
+        email: { type: string, format: email, maxLength: 100, example: yuliza.yajazma@test.com }
+    RegisterResponse:
+      type: object
+      properties:
+        publicId: { type: string, format: uuid }
+        username: { type: string, example: yyajazma }
+        email: { type: string, example: yuliza.yajazma@test.com }
+        message: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, example: mlopez }
+        password: { type: string, format: password, example: 'Cliente2026*' }
+    LoginResponse:
+      type: object
+      properties:
+        accessToken: { type: string, description: JWT firmado con HS256 }
+        tokenType: { type: string, example: Bearer }
+        expiresIn: { type: integer, format: int64, description: Segundos de validez, example: 3600 }
+        username: { type: string, example: mlopez }
+        role: { type: string, example: CLIENTE }
+        mustChangePassword: { type: boolean, example: false }
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, format: password }
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 64
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$'
+          description: Al menos una minúscula, una mayúscula, un número y un símbolo
+
+    UserResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 2 }
+        username: { type: string, example: mlopez }
+        role: { type: string, example: CLIENTE }
+        status: { $ref: '#/components/schemas/UserStatus' }
+        mustChangePassword: { type: boolean }
+        failedLoginAttempts: { type: integer, example: 0 }
+        lockedUntil: { type: string, format: date-time, nullable: true }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
+    UpdateUserStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/UserStatus' }
+
+    RoleResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 2 }
+        name: { type: string, example: CLIENTE }
+        description: { type: string }
+        status: { $ref: '#/components/schemas/RoleStatus' }
+    UpdateRoleStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/RoleStatus' }
