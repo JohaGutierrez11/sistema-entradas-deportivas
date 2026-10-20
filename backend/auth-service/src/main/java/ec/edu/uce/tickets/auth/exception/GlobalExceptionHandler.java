@@ -103,5 +103,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, problem, headers, status, request);
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());   // 401
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ProblemDetail handleLocked(AccountLockedException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.LOCKED, ex.getMessage());         // 423
+    }
+
+    @ExceptionHandler(AccountDisabledException.class)
+    public ProblemDetail handleDisabled(AccountDisabledException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());      // 403
+    }
+
 
 }

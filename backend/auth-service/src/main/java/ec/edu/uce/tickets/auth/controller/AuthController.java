@@ -1,11 +1,14 @@
 package ec.edu.uce.tickets.auth.controller;
 
+import ec.edu.uce.tickets.auth.dto.ChangePasswordRequest;
 import ec.edu.uce.tickets.auth.dto.RegisterRequest;
 import ec.edu.uce.tickets.auth.dto.RegisterResponse;
 import ec.edu.uce.tickets.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Autenticación")
@@ -23,5 +26,12 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
+    }
+
+    @PostMapping("/change-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@AuthenticationPrincipal Jwt jwt,
+                               @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(jwt.getSubject(), request);
     }
 }
