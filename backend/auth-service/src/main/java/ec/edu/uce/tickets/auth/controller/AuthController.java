@@ -1,8 +1,6 @@
 package ec.edu.uce.tickets.auth.controller;
 
-import ec.edu.uce.tickets.auth.dto.ChangePasswordRequest;
-import ec.edu.uce.tickets.auth.dto.RegisterRequest;
-import ec.edu.uce.tickets.auth.dto.RegisterResponse;
+import ec.edu.uce.tickets.auth.dto.*;
 import ec.edu.uce.tickets.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,6 +24,11 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
+    }
+
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 
     @PostMapping("/change-password")
