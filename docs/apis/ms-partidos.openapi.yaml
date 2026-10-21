@@ -438,8 +438,19 @@ paths:
         (existen y pertenecen al estadio del partido) y el estado del partido, para que
         ms-reservas rechace reservas de partidos que no estén `PROGRAMADO`.
       operationId: validateSeats
-      security:
-        - internalKey: []
+      # Sin token de usuario: se autentica solo con el encabezado X-Internal-Key.
+      # Se declara como parámetro de encabezado (y no como esquema de seguridad) para que
+      # Apidog lo muestre en la pestaña Headers.
+      security: []
+      parameters:
+        - name: X-Internal-Key
+          in: header
+          required: true
+          description: |
+            Clave compartida entre microservicios (variable de entorno `INTERNAL_API_KEY`).
+            En desarrollo: `dev-internal-key-cambiar-en-produccion`. En Apidog conviene usar
+            la variable `{{internalKey}}`. Si falta o no coincide → `401`.
+          schema: { type: string, example: dev-internal-key-cambiar-en-produccion }
       requestBody:
         required: true
         content:
