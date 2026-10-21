@@ -5,14 +5,15 @@ info:
   description: |
     Microservicio de Reservas del Sistema de Gestión de Entradas para eventos deportivos.
     Muestra la disponibilidad de asientos de un partido y permite a los clientes reservarlos
-    (HU-15, HU-16, HU-22).
+    (HU-15, HU-16, HU-22), confirmar la reserva y emitir los tickets con QR (HU-18).
 
     **Puerto 8083, base `reservation_db`.** El Swagger generado por springdoc-openapi
     (`/swagger-ui.html`) se compara contra este archivo.
 
     > Estado: `GET /me` y la disponibilidad están implementados (HU-22, HU-15).
-    > `POST /reservations` y `GET /reservations/{publicId}` corresponden a la HU-16
-    > (contrato escrito antes de cerrar la HU: si el código cambia, se actualiza este archivo).
+    > Reservar y consultar (HU-16), confirmar y ver el QR (HU-18) se escribieron con diseño
+    > primero (*design-first*): al cerrar cada HU se compara con `/swagger-ui.html` y, si algo
+    > cambió, se actualiza este archivo.
 
     ## Cómo se relaciona con los otros servicios
     - **auth-service** emite el token. Este servicio **no lo llama**: solo verifica la firma
@@ -33,6 +34,9 @@ info:
     | Los asientos deben pertenecer al estadio del partido | match-service | `404` |
     | La reserva queda `PENDIENTE` y retiene los asientos unos minutos | Parámetro `HOLD_MINUTES` = 10 | — |
     | Las reservas vencidas se liberan al reservar (y luego con la tarea automática, HU-17) | | — |
+    | Solo el dueño confirma, y solo si está `PENDIENTE` y no venció | HU-18 | `404` / `409` |
+    | Al confirmar, el partido debe seguir `PROGRAMADO` | match-service | `422` |
+    | Un ticket por asiento, con un código QR aleatorio de 64 caracteres | HU-18 | — |
 
     **Asiento ocupado** = vendido (`RESERVED`) **o** retenido (`HELD`) por una reserva que aún no vence.
 
@@ -65,7 +69,9 @@ tags:
   - name: Disponibilidad
     description: Asientos ocupados de un partido (HU-15)
   - name: Reservas
-    description: Crear y consultar reservas (HU-16)
+    description: Crear, consultar y confirmar reservas (HU-16, HU-18)
+  - name: Tickets
+    description: Imagen del código QR de cada entrada (HU-18)
 
 security:
   - bearerAuth: []
@@ -280,6 +286,128 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
               example: { type: about:blank, title: Not Found, status: 404, detail: No existe la reserva 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42 }
 
+  /reservation-api/v1/reservations/{publicId}/confirm:
+    post:
+      tags: [Reservas]
+      summary: Confirmar reserva y emitir tickets
+      description: |
+        Solo rol **CLIENTE**, y solo el dueño de la reserva (HU-18). No hay pasarela de pago:
+        confirmar equivale a pagar (simulado). No lleva body.
+
+        **Orden de validación**
+        1. Rol CLIENTE → si no, `403`.
+        2. La reserva existe y es del cliente del token → si no, `404` (no revela reservas ajenas).
+        3. match-service: el partido sigue `PROGRAMADO` (pudo cancelarse mientras el cliente
+           decidía) → `422` / `503`. Fuera de la transacción.
+        4. La reserva está `PENDIENTE` → si no, `409`.
+        5. Todavía no vence (`expiresAt` posterior a ahora) → si no, `409`.
+        6. Reserva `CONFIRMADA`, asientos `HELD` → `RESERVED` y **un ticket `ACTIVO` por asiento**.
+
+        **Concurrencia**: la reserva se lee con bloqueo pesimista (`SELECT ... FOR UPDATE`). Si
+        llegan dos confirmaciones a la vez (doble clic), la segunda espera y recibe `409`; nunca
+        se emiten tickets duplicados.
+
+        **Código QR**: 32 bytes de `SecureRandom` en hexadecimal (64 caracteres). No contiene
+        datos personales ni del asiento: en la puerta, el sistema busca el ticket por ese código.
+      operationId: confirmReservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationPublicId'
+      responses:
+        '200':
+          description: Reserva confirmada con sus tickets
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReservationResponse' }
+              example:
+                publicId: 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42
+                code: RES-2026-K7P4QX
+                matchId: 1
+                status: CONFIRMADA
+                createdAt: '2026-10-21T14:30:00'
+                expiresAt: '2026-10-21T14:40:00'
+                confirmedAt: '2026-10-21T14:34:12'
+                cancelledAt: null
+                seatIds: [13, 14]
+                tickets:
+                  - publicId: 7a1d9c3e-2f4b-4e8a-b6c1-0d9e8f7a6b5c
+                    seatId: 13
+                    qrCode: 9f2c7d1a4b8e4f0a9c3d5e7f1a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d0e2f4a6b
+                    status: ACTIVO
+                  - publicId: c2e4a6b8-0d1f-4a3c-9e5b-7d8f0a1b2c3d
+                    seatId: 14
+                    qrCode: 1b3d5f7a9c0e2a4c6e8a0b2d4f6a8c0e1f3b5d7a9c1e3a5c7e9a1b3d5f7a9c0e
+                    status: ACTIVO
+        '400':
+          description: El `publicId` no es un UUID válido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token es válido, pero no es de un CLIENTE. Sin cuerpo.
+        '404':
+          description: No existe, o pertenece a otro cliente
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Not Found, status: 404, detail: No existe la reserva 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42/confirm }
+        '409':
+          description: La reserva ya no está PENDIENTE, o venció
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                yaConfirmada:
+                  summary: Segunda confirmación
+                  value: { type: about:blank, title: Conflict, status: 409, detail: La reserva está CONFIRMADA y no se puede confirmar, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42/confirm }
+                vencida:
+                  summary: Pasaron los minutos de retención
+                  value: { type: about:blank, title: Conflict, status: 409, detail: La reserva venció. Vuelve a elegir tus asientos, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42/confirm }
+        '422':
+          description: El partido dejó de estar PROGRAMADO
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Unprocessable Content, status: 422, detail: El partido está CANCELADO y ya no admite confirmaciones, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42/confirm }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  # ------------------------------------------------------------------ Tickets
+  /reservation-api/v1/tickets/{publicId}/qr:
+    get:
+      tags: [Tickets]
+      summary: Imagen del QR de un ticket
+      description: |
+        Cualquier usuario autenticado (HU-18). Devuelve un PNG de 300 × 300 con el código QR
+        del ticket (generado con ZXing). Un CLIENTE solo ve los QR de sus tickets; el ADMIN, todos.
+        Ticket ajeno → `404` (no `403`), por la misma razón que en las reservas.
+
+        En Apidog, la pestaña de respuesta muestra la imagen directamente.
+      operationId: getTicketQr
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          description: '`publicId` del **ticket** (no de la reserva), tomado de `tickets[]` al confirmar'
+          schema: { type: string, format: uuid, example: 7a1d9c3e-2f4b-4e8a-b6c1-0d9e8f7a6b5c }
+      responses:
+        '200':
+          description: Imagen PNG del código QR
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '400':
+          description: El `publicId` no es un UUID válido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: El ticket no existe, o pertenece a otro cliente
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Not Found, status: 404, detail: No existe el ticket 7a1d9c3e-2f4b-4e8a-b6c1-0d9e8f7a6b5c, instance: /reservation-api/v1/tickets/7a1d9c3e-2f4b-4e8a-b6c1-0d9e8f7a6b5c/qr }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -289,6 +417,12 @@ components:
       description: Token obtenido en `POST /auth-api/v1/auth/login` de auth-service (puerto 8081)
 
   parameters:
+    ReservationPublicId:
+      name: publicId
+      in: path
+      required: true
+      description: Identificador público (UUID) devuelto al crear la reserva
+      schema: { type: string, format: uuid, example: 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42 }
     MatchId:
       name: matchId
       in: path
@@ -397,7 +531,7 @@ components:
       properties:
         publicId: { type: string, format: uuid }
         seatId: { type: integer, format: int64, example: 13 }
-        qrCode: { type: string, example: 9f2c7d1a4b8e4f0a9c3d5e7f1a2b4c6d }
+        qrCode: { type: string, minLength: 64, maxLength: 64, description: 'Código aleatorio en hexadecimal; es lo que contiene el QR', example: 9f2c7d1a4b8e4f0a9c3d5e7f1a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d0e2f4a6b }
         status: { type: string, enum: [ACTIVO, UTILIZADO, ANULADO] }
 
     Problem:
