@@ -2,7 +2,11 @@ package ec.edu.uce.tickets.reservation.repository;
 
 import ec.edu.uce.tickets.reservation.entity.Reservation;
 import ec.edu.uce.tickets.reservation.entity.ReservationStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,4 +20,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     List<Reservation> findByMatchIdAndStatusAndExpiresAtLessThanEqual(
             Long matchId, ReservationStatus status, LocalDateTime now);
+    /** Lee la reserva y la BLOQUEA hasta que termine la transacción (SELECT ... FOR UPDATE). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Reservation r WHERE r.publicId = :publicId")
+    Optional<Reservation> findByPublicIdForUpdate(@Param("publicId") UUID publicId);
 }

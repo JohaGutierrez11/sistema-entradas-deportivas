@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.reservation.service;
 import ec.edu.uce.tickets.reservation.entity.*;
 import ec.edu.uce.tickets.reservation.exception.BusinessRuleException;
 import ec.edu.uce.tickets.reservation.exception.ResourceInUseException;
+import ec.edu.uce.tickets.reservation.exception.ResourceNotFoundException;
 import ec.edu.uce.tickets.reservation.repository.ReservationRepository;
 import ec.edu.uce.tickets.reservation.repository.SeatLockRepository;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class ReservationWriter {
@@ -100,5 +102,37 @@ public class ReservationWriter {
             code = prefix + "-" + now.getYear() + "-" + random6;
         } while (reservationRepository.existsByCode(code));
         return code;
+    }
+
+    @Transactional
+    public Reservation confirm(UUID publicId, Long clientId) {
+        // Bloqueo: si llegan dos "confirmar" a la vez, la segunda espera aquí
+        Reservation reservation = reservationRepository.findByPublicIdForUpdate(publicId)
+                .filter(r -> r.getClientId().equals(clientId))
+                .orElseThrow(() -> new ResourceNotFoundException("No existe la reserva " + publicId));
+
+        LocalDateTime now = LocalDateTime.now(ECUADOR);
+
+        if (reservation.getStatus() != ReservationStatus.PENDIENTE) {
+            throw new ResourceInUseException("La reserva está " + reservation.getStatus() + " y no se puede confirmar");
+        }
+        if (!reservation.getExpiresAt().isAfter(now)) {
+            throw new ResourceInUseException("La reserva venció. Vuelve a elegir tus asientos");
+        }
+
+        reservation.setStatus(ReservationStatus.CONFIRMADA);
+        reservation.setConfirmedAt(now);
+
+        for (SeatLock lock : reservation.getSeatLocks()) {
+            lock.setStatus(SeatLockStatus.RESERVED);          // de retenido a vendido
+
+            Ticket ticket = new Ticket();
+            ticket.setSeatId(lock.getSeatId());
+            ticket.setQrCode(qrCodeGenerator.newCode());
+            ticket.setStatus(TicketStatus.ACTIVO);
+            reservation.addTicket(ticket);
+        }
+
+        return reservationRepository.saveAndFlush(reservation);
     }
 }

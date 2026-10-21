@@ -49,4 +49,9 @@ public class ReservationController {
     private boolean isAdmin(Jwt jwt) {
         return "ADMIN".equals(jwt.getClaimAsString("role"));
     }
+
+    @PostMapping("/{publicId}/confirm")
+    public ReservationResponse confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID publicId) {
+        return reservationService.confirm(publicId, clientIdOf(jwt));
+    }
 }

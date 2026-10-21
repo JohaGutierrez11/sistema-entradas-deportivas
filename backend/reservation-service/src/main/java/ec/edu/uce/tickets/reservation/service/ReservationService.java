@@ -1,5 +1,6 @@
 package ec.edu.uce.tickets.reservation.service;
 
+import ec.edu.uce.tickets.reservation.client.MatchInfo;
 import ec.edu.uce.tickets.reservation.client.MatchServiceClient;
 import ec.edu.uce.tickets.reservation.client.SeatValidationResult;
 import ec.edu.uce.tickets.reservation.dto.CreateReservationRequest;
@@ -55,5 +56,20 @@ public class ReservationService {
             throw new ResourceNotFoundException("No existe la reserva " + publicId);
         }
         return ReservationResponse.from(reservation);
+    }
+
+    // SIN @Transactional: primero match-service, después la transacción
+    public ReservationResponse confirm(UUID publicId, Long clientId) {
+        Reservation reservation = reservationRepository.findByPublicId(publicId)
+                .filter(r -> r.getClientId().equals(clientId))
+                .orElseThrow(() -> new ResourceNotFoundException("No existe la reserva " + publicId));
+
+        // ¿Cancelaron el partido mientras el cliente decidía?
+        MatchInfo match = matchServiceClient.getMatch(reservation.getMatchId());
+        if (!"PROGRAMADO".equals(match.status())) {
+            throw new BusinessRuleException("El partido está " + match.status() + " y ya no admite confirmaciones");
+        }
+
+        return ReservationResponse.from(reservationWriter.confirm(publicId, clientId));
     }
 }
