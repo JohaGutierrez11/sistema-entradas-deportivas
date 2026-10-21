@@ -1,0 +1,33 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: reservation-service
+  datasource:
+    url: jdbc:postgresql://localhost:5433/reservation_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  mvc:
+    problemdetails:
+      enabled: true
+  web:
+    locale: es
+    locale-resolver: fixed
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+app:
+  jwt:
+    # DEBE ser el MISMO secreto que auth-service: si no, todos los tokens serán rechazados (401)
+    secret: ${JWT_SECRET:dev-only-secret-cambiar-en-produccion-0123456789abcdef}
+  match-service:
+    url: ${MATCH_SERVICE_URL:http://localhost:8082}
+    internal-key: ${INTERNAL_API_KEY:dev-internal-key-cambiar-en-produccion}
