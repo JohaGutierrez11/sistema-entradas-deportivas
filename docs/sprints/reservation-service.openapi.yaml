@@ -1,0 +1,420 @@
+openapi: 3.0.3
+info:
+  title: reservation-service · API de Reservas y Tickets
+  version: 1.0.0
+  description: |
+    Microservicio de Reservas del Sistema de Gestión de Entradas para eventos deportivos.
+    Muestra la disponibilidad de asientos de un partido y permite a los clientes reservarlos
+    (HU-15, HU-16, HU-22).
+
+    **Puerto 8083, base `reservation_db`.** El Swagger generado por springdoc-openapi
+    (`/swagger-ui.html`) se compara contra este archivo.
+
+    > Estado: `GET /me` y la disponibilidad están implementados (HU-22, HU-15).
+    > `POST /reservations` y `GET /reservations/{publicId}` corresponden a la HU-16
+    > (contrato escrito antes de cerrar la HU: si el código cambia, se actualiza este archivo).
+
+    ## Cómo se relaciona con los otros servicios
+    - **auth-service** emite el token. Este servicio **no lo llama**: solo verifica la firma
+      con el mismo secreto (`JWT_SECRET`). El `clientId` del cliente sale del claim `clientId`
+      del token, **nunca del body**.
+    - **match-service** es la fuente de verdad de partidos, estadios y asientos. Este servicio
+      lo consulta por REST (timeouts: conexión 2 s, lectura 3 s). Si no responde → `503`.
+      La validación de asientos usa el endpoint interno `POST /match-api/v1/internal/seats/validate`,
+      protegido con el encabezado `X-Internal-Key` (no lo usa el front ni Apidog).
+
+    ## Reglas de negocio
+    | Regla | Origen | Respuesta |
+    |---|---|---|
+    | Solo el rol CLIENTE reserva; el ADMIN no | Decisión #8 Sprint 0 | `403` |
+    | Máximo de entradas por cliente y partido (sumando reservas activas) | Parámetro `MAX_TICKETS_PER_MATCH` = 6 | `422` |
+    | Un asiento no puede estar en dos reservas activas | Consulta + `UNIQUE(match_id, seat_id)` | `409` |
+    | Solo se reserva en partidos `PROGRAMADO` | match-service | `422` |
+    | Los asientos deben pertenecer al estadio del partido | match-service | `404` |
+    | La reserva queda `PENDIENTE` y retiene los asientos unos minutos | Parámetro `HOLD_MINUTES` = 10 | — |
+    | Las reservas vencidas se liberan al reservar (y luego con la tarea automática, HU-17) | | — |
+
+    **Asiento ocupado** = vendido (`RESERVED`) **o** retenido (`HELD`) por una reserva que aún no vence.
+
+    ## Convenciones
+    - Prefijo `/reservation-api/v1`.
+    - Errores en formato RFC 7807 (`application/problem+json`), mensajes en español.
+    - `401`/`403` los responde Spring Security sin cuerpo, con `WWW-Authenticate: Bearer`.
+    - Las reservas se identifican hacia afuera con `publicId` (UUID), no con el id numérico,
+      para que no se puedan enumerar.
+    - Fechas y horas en hora de Ecuador (`America/Guayaquil`), formato ISO 8601.
+
+    ## Cómo probar en Apidog
+    1. Ten arriba **auth-service (8081)**, **match-service (8082)** y **reservation-service (8083)**.
+    2. En auth-service ejecuta `POST /auth-api/v1/auth/login` con un **cliente**
+       (`cvera`, `dmorales`, `mlopez`…) y guarda `$.accessToken` en `{{token}}`
+       (Post Processors → Extract Variable).
+    3. En este servicio usa **Auth → Bearer Token** con `{{token}}`.
+    4. Para la prueba del `403`, inicia sesión con `admin`.
+
+    Credenciales de desarrollo: `database/README.md`.
+  contact:
+    name: Johanna Gutiérrez
+servers:
+  - url: http://localhost:8083
+    description: Desarrollo local
+
+tags:
+  - name: Sesión
+    description: Datos del token con el que se llama al servicio
+  - name: Disponibilidad
+    description: Asientos ocupados de un partido (HU-15)
+  - name: Reservas
+    description: Crear y consultar reservas (HU-16)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ------------------------------------------------------------------ Sesión
+  /reservation-api/v1/me:
+    get:
+      tags: [Sesión]
+      summary: Quién soy (según el token)
+      description: |
+        Cualquier usuario autenticado (HU-22). Devuelve lo que este servicio lee del JWT, sin
+        consultar a auth-service. Sirve para comprobar que la verificación del token funciona
+        entre microservicios. `clientId` es `null` para el ADMIN.
+      operationId: me
+      responses:
+        '200':
+          description: Datos del token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+              examples:
+                cliente:
+                  summary: Cliente
+                  value: { username: cvera, role: CLIENTE, clientId: 2, expiresAt: '2026-10-21T20:15:00Z' }
+                admin:
+                  summary: Administrador
+                  value: { username: admin, role: ADMIN, clientId: null, expiresAt: '2026-10-21T20:15:00Z' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ------------------------------------------------------------------ Disponibilidad
+  /reservation-api/v1/matches/{matchId}/availability:
+    get:
+      tags: [Disponibilidad]
+      summary: Asientos ocupados de un partido
+      description: |
+        Cualquier usuario autenticado (HU-15). Primero confirma con match-service que el partido
+        existe; después devuelve **solo los asientos ocupados**, ordenados por `seatId`.
+        Todo asiento del estadio que no aparece en la lista está libre.
+
+        - `RESERVED`: vendido (reserva confirmada).
+        - `HELD`: retenido por una reserva `PENDIENTE` que todavía no vence.
+
+        `refreshSeconds` (parámetro `AVAILABILITY_REFRESH_SECONDS`) indica al front cada cuántos
+        segundos volver a consultar.
+      operationId: getAvailability
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+      responses:
+        '200':
+          description: Asientos ocupados
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
+              examples:
+                partido1:
+                  summary: Partido 1 recién cargadas las semillas
+                  value:
+                    matchId: 1
+                    matchStatus: PROGRAMADO
+                    occupiedSeats:
+                      - { seatId: 1, status: RESERVED }
+                      - { seatId: 2, status: RESERVED }
+                      - { seatId: 3, status: RESERVED }
+                      - { seatId: 4, status: RESERVED }
+                      - { seatId: 5, status: RESERVED }
+                      - { seatId: 6, status: RESERVED }
+                      - { seatId: 11, status: RESERVED }
+                      - { seatId: 12, status: RESERVED }
+                      - { seatId: 35, status: HELD }
+                      - { seatId: 36, status: HELD }
+                      - { seatId: 37, status: HELD }
+                    refreshSeconds: 5
+                sinOcupados:
+                  summary: Partido 2 (nadie ha reservado)
+                  value: { matchId: 2, matchStatus: PROGRAMADO, occupiedSeats: [], refreshSeconds: 5 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: El partido no existe en match-service
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Not Found, status: 404, detail: No existe el partido con el id 99, instance: /reservation-api/v1/matches/99/availability }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  # ------------------------------------------------------------------ Reservas
+  /reservation-api/v1/reservations:
+    post:
+      tags: [Reservas]
+      summary: Reservar asientos
+      description: |
+        Solo rol **CLIENTE** (HU-16). El cliente se toma del token.
+
+        **Orden de validación**
+        1. Rol CLIENTE → si no, `403`.
+        2. Body: `matchId` y de 1 a 6 `seatIds` sin repetir → si no, `400`.
+        3. match-service: el partido existe y está `PROGRAMADO`, y los asientos son de su estadio
+           → `404` / `422` / `503`. Esta llamada se hace **fuera** de la transacción.
+        4. Se liberan las reservas `PENDIENTE` vencidas de ese partido (pasan a `EXPIRADA`).
+        5. Máximo por cliente y partido (`MAX_TICKETS_PER_MATCH`) → `422`.
+        6. Asientos ocupados → `409`. Si dos clientes piden el mismo asiento a la vez, el
+           `UNIQUE` de la base deja pasar solo a uno; el otro recibe `409`.
+        7. Se crea la reserva `PENDIENTE` con los asientos `HELD` hasta `expiresAt`
+           (ahora + `HOLD_MINUTES`) → `201` con encabezado `Location`.
+
+        El código de reserva (`RES-2026-K7P4QX`) es aleatorio, sin caracteres confusos
+        (`0/O`, `1/I`), para que no se pueda adivinar y se pueda dictar en boletería.
+      operationId: createReservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReservationRequest' }
+            examples:
+              valida:
+                summary: cvera reserva 2 asientos del partido 1
+                value: { matchId: 1, seatIds: [13, 14] }
+              otroEstadio:
+                summary: Asiento del estadio 2 en un partido del estadio 1 (404)
+                value: { matchId: 1, seatIds: [200] }
+              cancelado:
+                summary: Partido 6 está CANCELADO (422)
+                value: { matchId: 6, seatIds: [50] }
+      responses:
+        '201':
+          description: Reserva creada en estado PENDIENTE
+          headers:
+            Location:
+              schema: { type: string, example: http://localhost:8083/reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42 }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReservationResponse' }
+              example:
+                publicId: 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42
+                code: RES-2026-K7P4QX
+                matchId: 1
+                status: PENDIENTE
+                createdAt: '2026-10-21T14:30:00'
+                expiresAt: '2026-10-21T14:40:00'
+                confirmedAt: null
+                cancelledAt: null
+                seatIds: [13, 14]
+                tickets: []
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token es válido, pero no es de un CLIENTE (el ADMIN no reserva). Sin cuerpo.
+        '404':
+          description: El partido no existe, o algún asiento no pertenece a su estadio
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                asientos:
+                  value: { type: about:blank, title: Not Found, status: 404, detail: 'Estos asientos no existen en el estadio del partido: [200]', instance: /reservation-api/v1/reservations }
+                partido:
+                  value: { type: about:blank, title: Not Found, status: 404, detail: No existe el partido con el id 99, instance: /reservation-api/v1/reservations }
+        '409':
+          description: Algún asiento ya está vendido o retenido por otra reserva vigente
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Conflict, status: 409, detail: 'Estos asientos ya no están disponibles: [13]', instance: /reservation-api/v1/reservations }
+        '422':
+          description: El partido no admite reservas, o se supera el máximo de entradas por partido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                maximo:
+                  summary: Supera el máximo
+                  value: { type: about:blank, title: Unprocessable Content, status: 422, detail: Solo puedes tener 6 entradas por partido. Ya tienes 4 y estás pidiendo 3, instance: /reservation-api/v1/reservations }
+                estado:
+                  summary: Partido no PROGRAMADO
+                  value: { type: about:blank, title: Unprocessable Content, status: 422, detail: El partido está CANCELADO y no admite reservas, instance: /reservation-api/v1/reservations }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /reservation-api/v1/reservations/{publicId}:
+    get:
+      tags: [Reservas]
+      summary: Consultar una reserva
+      description: |
+        Cualquier usuario autenticado (HU-16). Un **CLIENTE** solo ve sus propias reservas;
+        el **ADMIN** ve cualquiera.
+
+        Si la reserva es de otro cliente se responde **`404` y no `403`**: un `403` confirmaría
+        que ese `publicId` existe (protección contra IDOR y enumeración).
+      operationId: getReservation
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          description: Identificador público (UUID) devuelto al crear la reserva
+          schema: { type: string, format: uuid, example: 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42 }
+      responses:
+        '200':
+          description: La reserva
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReservationResponse' }
+        '400':
+          description: El `publicId` no es un UUID válido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: No existe, o pertenece a otro cliente
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Not Found, status: 404, detail: No existe la reserva 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42 }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token obtenido en `POST /auth-api/v1/auth/login` de auth-service (puerto 8081)
+
+  parameters:
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      description: Id del partido en match-service
+      schema: { type: integer, format: int64, minimum: 1, example: 1 }
+
+  responses:
+    ValidationError:
+      description: Datos de entrada inválidos
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: La solicitud tiene campos inválidos
+            instance: /reservation-api/v1/reservations
+            errors:
+              - { field: seatIds, message: el tamaño debe estar entre 0 y 6 }
+    Unauthorized:
+      description: Sin token, o token inválido o vencido. Sin cuerpo; encabezado `WWW-Authenticate`.
+      headers:
+        WWW-Authenticate: { schema: { type: string, example: Bearer } }
+    ServiceUnavailable:
+      description: match-service no responde (apagado o supera el tiempo de espera). No se guarda nada.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: about:blank, title: Service Unavailable, status: 503, detail: El servicio de partidos no está disponible. Intenta de nuevo en unos minutos, instance: /reservation-api/v1/reservations }
+
+  schemas:
+    MeResponse:
+      type: object
+      properties:
+        username: { type: string, example: cvera }
+        role: { type: string, enum: [ADMIN, CLIENTE], example: CLIENTE }
+        clientId: { type: integer, format: int64, nullable: true, example: 2 }
+        expiresAt: { type: string, format: date-time, example: '2026-10-21T20:15:00Z' }
+
+    AvailabilityResponse:
+      type: object
+      properties:
+        matchId: { type: integer, format: int64, example: 1 }
+        matchStatus:
+          type: string
+          description: Estado del partido según match-service
+          example: PROGRAMADO
+        occupiedSeats:
+          type: array
+          items: { $ref: '#/components/schemas/OccupiedSeat' }
+        refreshSeconds: { type: integer, example: 5 }
+
+    OccupiedSeat:
+      type: object
+      properties:
+        seatId: { type: integer, format: int64, example: 35 }
+        status: { $ref: '#/components/schemas/SeatLockStatus' }
+
+    SeatLockStatus:
+      type: string
+      enum: [HELD, RESERVED]
+      description: '`HELD` retenido por una reserva pendiente; `RESERVED` vendido'
+
+    CreateReservationRequest:
+      type: object
+      required: [matchId, seatIds]
+      description: No lleva `clientId`; el cliente sale del token.
+      properties:
+        matchId: { type: integer, format: int64, minimum: 1, example: 1 }
+        seatIds:
+          type: array
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          items: { type: integer, format: int64, minimum: 1 }
+          example: [13, 14]
+
+    ReservationResponse:
+      type: object
+      properties:
+        publicId: { type: string, format: uuid }
+        code: { type: string, example: RES-2026-K7P4QX }
+        matchId: { type: integer, format: int64, example: 1 }
+        status: { $ref: '#/components/schemas/ReservationStatus' }
+        createdAt: { type: string, format: date-time, example: '2026-10-21T14:30:00' }
+        expiresAt: { type: string, format: date-time, example: '2026-10-21T14:40:00' }
+        confirmedAt: { type: string, format: date-time, nullable: true }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+        seatIds:
+          type: array
+          items: { type: integer, format: int64 }
+          example: [13, 14]
+        tickets:
+          type: array
+          description: Vacío mientras la reserva está PENDIENTE; se llena al confirmar (HU-18)
+          items: { $ref: '#/components/schemas/TicketResponse' }
+
+    ReservationStatus:
+      type: string
+      enum: [PENDIENTE, CONFIRMADA, CANCELADA, EXPIRADA]
+
+    TicketResponse:
+      type: object
+      properties:
+        publicId: { type: string, format: uuid }
+        seatId: { type: integer, format: int64, example: 13 }
+        qrCode: { type: string, example: 9f2c7d1a4b8e4f0a9c3d5e7f1a2b4c6d }
+        status: { type: string, enum: [ACTIVO, UTILIZADO, ANULADO] }
+
+    Problem:
+      type: object
+      description: Error en formato RFC 7807 (Problem Details)
+      required: [title, status]
+      properties:
+        type: { type: string, example: about:blank }
+        title: { type: string, example: Conflict }
+        status: { type: integer, example: 409 }
+        detail: { type: string, example: 'Estos asientos ya no están disponibles: [13]' }
+        instance: { type: string, example: /reservation-api/v1/reservations }
+        errors:
+          type: array
+          description: Solo en errores de validación (400)
+          items:
+            type: object
+            properties:
+              field: { type: string, example: seatIds }
+              message: { type: string, example: el tamaño debe estar entre 0 y 6 }

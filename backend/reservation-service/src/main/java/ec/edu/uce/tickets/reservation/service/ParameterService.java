@@ -18,4 +18,10 @@ public class ParameterService {
                 .getValue();
         return Integer.parseInt(value);
     }
+
+    public String getString(String code) {
+        return parameterRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalStateException("Falta el parámetro " + code))
+                .getValue();
+    }
 }
