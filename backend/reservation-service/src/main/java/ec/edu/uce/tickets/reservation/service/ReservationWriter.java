@@ -22,16 +22,19 @@ public class ReservationWriter {
     private static final ZoneId ECUADOR = ZoneId.of("America/Guayaquil");
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
+
     private final ReservationRepository reservationRepository;
     private final SeatLockRepository seatLockRepository;
     private final ParameterService parameterService;
     private final SecureRandom random = new SecureRandom();
+    private final QrCodeGenerator qrCodeGenerator;
 
     public ReservationWriter(ReservationRepository reservationRepository, SeatLockRepository seatLockRepository,
-                             ParameterService parameterService) {
+                             ParameterService parameterService, QrCodeGenerator qrCodeGenerator) {
         this.reservationRepository = reservationRepository;
         this.seatLockRepository = seatLockRepository;
         this.parameterService = parameterService;
+        this.qrCodeGenerator = qrCodeGenerator;
     }
 
     @Transactional
@@ -78,8 +81,7 @@ public class ReservationWriter {
     }
 
     /** Marca como EXPIRADAS las reservas pendientes vencidas de un partido y libera sus asientos. */
-    @Transactional
-    public void expirePending(Long matchId, LocalDateTime now) {
+    private void expirePending(Long matchId, LocalDateTime now) {
         List<Reservation> expired = reservationRepository
                 .findByMatchIdAndStatusAndExpiresAtLessThanEqual(matchId, ReservationStatus.PENDIENTE, now);
         for (Reservation reservation : expired) {
