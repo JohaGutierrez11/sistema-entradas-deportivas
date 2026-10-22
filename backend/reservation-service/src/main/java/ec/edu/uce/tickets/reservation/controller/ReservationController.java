@@ -1,10 +1,14 @@
 package ec.edu.uce.tickets.reservation.controller;
 
 import ec.edu.uce.tickets.reservation.dto.CreateReservationRequest;
+import ec.edu.uce.tickets.reservation.dto.PdfFile;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
 import ec.edu.uce.tickets.reservation.service.ReservationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -58,5 +62,15 @@ public class ReservationController {
     @PostMapping("/{publicId}/cancel")
     public ReservationResponse cancel(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID publicId) {
         return reservationService.cancel(publicId, clientIdOf(jwt), isAdmin(jwt));
+    }
+
+    @GetMapping("/{publicId}/tickets/pdf")
+    public ResponseEntity<byte[]> ticketsPdf(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID publicId) {
+        PdfFile file = ticketPdfService.build(publicId, clientIdOf(jwt), isAdmin(jwt));
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(file.filename()).build().toString())
+                .body(file.content());
     }
 }
