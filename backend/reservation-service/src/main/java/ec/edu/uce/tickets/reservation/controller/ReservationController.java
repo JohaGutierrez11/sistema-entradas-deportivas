@@ -4,6 +4,7 @@ import ec.edu.uce.tickets.reservation.dto.CreateReservationRequest;
 import ec.edu.uce.tickets.reservation.dto.PdfFile;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
 import ec.edu.uce.tickets.reservation.service.ReservationService;
+import ec.edu.uce.tickets.reservation.service.TicketPdfService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
@@ -24,9 +25,11 @@ import java.util.UUID;
 public class ReservationController {
 
     private final ReservationService reservationService;
+    private final TicketPdfService ticketPdfService;
 
-    public ReservationController(ReservationService reservationService) {
+    public ReservationController(ReservationService reservationService, TicketPdfService ticketPdfService) {
         this.reservationService = reservationService;
+        this.ticketPdfService = ticketPdfService;
     }
 
     @PostMapping
