@@ -26,16 +26,18 @@ public class AdminReportPdf {
 
     private static final Font TITLE = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
     private static final Font SUBTITLE = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
-    private static final Font MATCH = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
     private static final Font KPI_LABEL = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
     private static final Font KPI_VALUE = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
     private static final Font HEADER = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE);
     private static final Font CELL = FontFactory.getFont(FontFactory.HELVETICA, 9);
+    private static final Font MATCH = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, new Color(44, 44, 42));
 
-    private static final Color HEADER_BG = new Color(33, 37, 41);
-    private static final Color KPI_BG = new Color(241, 239, 232);
-    private static final Color BAR_FILL = new Color(29, 158, 117);
-    private static final Color BAR_EMPTY = new Color(225, 245, 238);
+    private static final Color HEADER_BG = new Color(12, 68, 124);     // azul marino
+    private static final Color KPI_BG = new Color(230, 241, 251);      // azul hielo
+    private static final Color BAR_EMPTY = new Color(230, 241, 251);   // azul muy claro
+    private static final Color BAR_LOW = new Color(133, 183, 235);     // < 50 %
+    private static final Color BAR_MID = new Color(55, 138, 221);      // 50–89 %
+    private static final Color BAR_HIGH = new Color(24, 95, 165);      // ≥ 90 %
 
     public byte[] build(AdminReportResponse report, String adminUsername) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -155,10 +157,10 @@ public class AdminReportPdf {
         PdfPTable bar;
         if (filled <= 0 || filled >= 100) {
             bar = new PdfPTable(1);
-            bar.addCell(barPart(filled >= 100 ? BAR_FILL : BAR_EMPTY));
+            bar.addCell(barPart(filled >= 100 ? barColor(percentage) : BAR_EMPTY));
         } else {
             bar = new PdfPTable(new float[]{filled, 100 - filled});
-            bar.addCell(barPart(BAR_FILL));
+            bar.addCell(barPart(barColor(percentage)));
             bar.addCell(barPart(BAR_EMPTY));
         }
         bar.setWidthPercentage(100);
@@ -185,5 +187,12 @@ public class AdminReportPdf {
         PdfPCell cell = new PdfPCell(new Phrase(text, CELL));
         cell.setPadding(5);
         return cell;
+    }
+
+    private Color barColor(double percentage) {
+        if (percentage >= 90) {
+            return BAR_HIGH;
+        }
+        return percentage >= 50 ? BAR_MID : BAR_LOW;
     }
 }
