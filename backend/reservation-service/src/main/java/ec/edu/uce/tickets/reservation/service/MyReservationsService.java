@@ -22,13 +22,13 @@ import java.util.Map;
 public class MyReservationsService {
 
     private final ReservationService reservationService;
-    private final MatchServiceClient matchServiceClient;
+    private final MatchLookup matchLookup;
     private final MyReservationsPdf myReservationsPdf;
 
-    public MyReservationsService(ReservationService reservationService, MatchServiceClient matchServiceClient,
+    public MyReservationsService(ReservationService reservationService, MatchLookup matchLookup,
                                  MyReservationsPdf myReservationsPdf) {
         this.reservationService = reservationService;
-        this.matchServiceClient = matchServiceClient;
+        this.matchLookup = matchLookup;
         this.myReservationsPdf = myReservationsPdf;
     }
 
@@ -39,7 +39,7 @@ public class MyReservationsService {
         // (b) match-service, fuera de la transacción: una sola llamada por partido distinto
         Map<Long, MatchSummary> matches = new HashMap<>();
         for (Long matchId : reservations.stream().map(ReservationResponse::matchId).distinct().toList()) {
-            matches.put(matchId, findMatchOrNull(matchId));
+            matches.put(matchId, matchLookup.findOrNull(matchId));
         }
 
         return reservations.stream()
@@ -52,13 +52,4 @@ public class MyReservationsService {
         return myReservationsPdf.build(username, findMine(clientId), now);
     }
 
-    /** Degradación elegante: sin match-service, el historial se muestra igual, sin datos del partido. */
-    private MatchSummary findMatchOrNull(Long matchId) {
-        try {
-            return MatchSummary.from(matchServiceClient.getMatch(matchId));
-        } catch (ServiceUnavailableException | ResourceNotFoundException e) {
-            log.warn("Sin datos del partido {} para el historial: {}", matchId, e.getMessage());
-            return null;
-        }
-    }
 }
