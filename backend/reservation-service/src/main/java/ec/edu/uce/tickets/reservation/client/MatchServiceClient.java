@@ -58,4 +58,23 @@ public class MatchServiceClient {
             throw new ServiceUnavailableException(UNAVAILABLE);
         }
     }
+
+    /** Ocupación por sección de un partido, a partir de los asientos vendidos (endpoint interno). */
+    public MatchOccupancy getOccupancy(Long matchId, Collection<Long> soldSeatIds) {
+        try {
+            return restClient.post()
+                    .uri("/match-api/v1/internal/matches/{id}/occupancy", matchId)
+                    .body(new OccupancyRequest(soldSeatIds))
+                    .retrieve()
+                    .onStatus(status -> status.value() == 404, (request, response) -> {
+                        throw new ResourceNotFoundException("No existe el partido con el id " + matchId);
+                    })
+                    .body(MatchOccupancy.class);
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (RestClientException ex) {
+            log.warn("Fallo al consultar la ocupación del partido {} en match-service: {}", matchId, ex.getMessage());
+            throw new ServiceUnavailableException(UNAVAILABLE);
+        }
+    }
 }

@@ -40,4 +40,8 @@ public interface SeatLockRepository extends JpaRepository<SeatLock, Long> {
                                    @Param("seatIds") Collection<Long> seatIds,
                                    @Param("reserved") SeatLockStatus reserved,
                                    @Param("now") LocalDateTime now);
+
+    /** Asientos de un partido con cierto estado (para el reporte: los RESERVED = vendidos). */
+    @Query("SELECT l.seatId FROM SeatLock l WHERE l.matchId = :matchId AND l.status = :status")
+    List<Long> findSeatIds(@Param("matchId") Long matchId, @Param("status") SeatLockStatus status);
 }

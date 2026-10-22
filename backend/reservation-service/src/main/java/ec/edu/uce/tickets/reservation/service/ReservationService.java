@@ -7,12 +7,20 @@ import ec.edu.uce.tickets.reservation.dto.CreateReservationRequest;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
 import ec.edu.uce.tickets.reservation.entity.Reservation;
 import ec.edu.uce.tickets.reservation.entity.ReservationStatus;
+import ec.edu.uce.tickets.reservation.entity.SeatLockStatus;
 import ec.edu.uce.tickets.reservation.exception.BusinessRuleException;
 import ec.edu.uce.tickets.reservation.exception.ResourceNotFoundException;
 import ec.edu.uce.tickets.reservation.repository.ReservationRepository;
+import ec.edu.uce.tickets.reservation.repository.SeatLockRepository;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.criteria.Predicate;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,12 +30,14 @@ public class ReservationService {
     private final MatchServiceClient matchServiceClient;
     private final ReservationWriter reservationWriter;
     private final ReservationRepository reservationRepository;
+    private final SeatLockRepository seatLockRepository;
 
     public ReservationService(MatchServiceClient matchServiceClient, ReservationWriter reservationWriter,
-                              ReservationRepository reservationRepository) {
+                              ReservationRepository reservationRepository, SeatLockRepository seatLockRepository) {
         this.matchServiceClient = matchServiceClient;
         this.reservationWriter = reservationWriter;
         this.reservationRepository = reservationRepository;
+        this.seatLockRepository = seatLockRepository;
     }
 
     // SIN @Transactional: primero se consulta a match-service y después se abre la transacción
@@ -102,5 +112,36 @@ public class ReservationService {
         return reservationRepository.findByClientIdOrderByCreatedAtDesc(clientId).stream()
                 .map(ReservationResponse::from)
                 .toList();
+    }
+
+    /** Reservas filtradas para el reporte. Todos los filtros son opcionales. */
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> search(LocalDate from, LocalDate to, Long matchId, ReservationStatus status) {
+        Specification<Reservation> spec = (root, query, cb) -> {
+            List<Predicate> filters = new ArrayList<>();
+            if (from != null) {
+                filters.add(cb.greaterThanOrEqualTo(root.<LocalDateTime>get("createdAt"), from.atStartOfDay()));
+            }
+            if (to != null) {
+                // "hasta el 31" incluye el 31 completo: menor que el 1 a las 00:00
+                filters.add(cb.lessThan(root.<LocalDateTime>get("createdAt"), to.plusDays(1).atStartOfDay()));
+            }
+            if (matchId != null) {
+                filters.add(cb.equal(root.get("matchId"), matchId));
+            }
+            if (status != null) {
+                filters.add(cb.equal(root.get("status"), status));
+            }
+            return cb.and(filters.toArray(new Predicate[0]));
+        };
+        return reservationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt")).stream()
+                .map(ReservationResponse::from)
+                .toList();
+    }
+
+    /** Asientos vendidos de un partido. */
+    @Transactional(readOnly = true)
+    public List<Long> findSoldSeatIds(Long matchId) {
+        return seatLockRepository.findSeatIds(matchId, SeatLockStatus.RESERVED);
     }
 }
