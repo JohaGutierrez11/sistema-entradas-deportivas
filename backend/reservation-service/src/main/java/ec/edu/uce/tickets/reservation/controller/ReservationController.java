@@ -54,4 +54,9 @@ public class ReservationController {
     public ReservationResponse confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID publicId) {
         return reservationService.confirm(publicId, clientIdOf(jwt));
     }
+
+    @PostMapping("/{publicId}/cancel")
+    public ReservationResponse cancel(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID publicId) {
+        return reservationService.cancel(publicId, clientIdOf(jwt), isAdmin(jwt));
+    }
 }

@@ -6,6 +6,7 @@ import ec.edu.uce.tickets.reservation.client.SeatValidationResult;
 import ec.edu.uce.tickets.reservation.dto.CreateReservationRequest;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
 import ec.edu.uce.tickets.reservation.entity.Reservation;
+import ec.edu.uce.tickets.reservation.entity.ReservationStatus;
 import ec.edu.uce.tickets.reservation.exception.BusinessRuleException;
 import ec.edu.uce.tickets.reservation.exception.ResourceNotFoundException;
 import ec.edu.uce.tickets.reservation.repository.ReservationRepository;
@@ -70,5 +71,27 @@ public class ReservationService {
         }
 
         return reservationWriter.confirm(publicId, clientId);
+    }
+
+    /** La reserva si existe y quien pregunta puede verla (dueño o admin). Si no, 404 (anti-IDOR). */
+    private Reservation findAccessible(UUID publicId, Long clientId, boolean admin) {
+        return reservationRepository.findByPublicId(publicId)
+                .filter(r -> admin || r.getClientId().equals(clientId))
+                .orElseThrow(() -> new ResourceNotFoundException("No existe la reserva " + publicId));
+    }
+
+    // SIN @Transactional: si hace falta, primero match-service; después la transacción
+    public ReservationResponse cancel(UUID publicId, Long clientId, boolean admin) {
+        Reservation reservation = findAccessible(publicId, clientId, admin);
+
+        // Solo una reserva pagada depende del partido: no se devuelve una entrada de un partido jugado
+        if (reservation.getStatus() == ReservationStatus.CONFIRMADA) {
+            MatchInfo match = matchServiceClient.getMatch(reservation.getMatchId());
+            if ("EN_CURSO".equals(match.status()) || "FINALIZADO".equals(match.status())) {
+                throw new BusinessRuleException("No se puede cancelar porque el partido está " + match.status());
+            }
+        }
+
+        return reservationWriter.cancel(publicId, clientId, admin);
     }
 }
