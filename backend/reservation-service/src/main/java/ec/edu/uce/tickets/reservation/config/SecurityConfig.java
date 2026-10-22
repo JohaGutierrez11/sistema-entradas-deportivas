@@ -14,6 +14,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final String CLIENTE = "CLIENTE";
+    private static final String ADMIN = "ADMIN";
+
     @Bean
     @SuppressWarnings("java:S4502")
     public SecurityFilterChain securityFilterChain(HttpSecurity http){
@@ -25,9 +28,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reservation-api/v1/reservations").hasRole("CLIENTE")
-                        .requestMatchers(HttpMethod.POST, "/reservation-api/v1/reservations/*/confirm").hasRole("CLIENTE")
-                        .requestMatchers(HttpMethod.POST, "/reservation-api/v1/reservations/*/cancel").hasAnyRole("CLIENTE", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/reservation-api/v1/reservations").hasRole(CLIENTE)
+                        .requestMatchers(HttpMethod.POST, "/reservation-api/v1/reservations/*/confirm").hasRole(CLIENTE)
+                        .requestMatchers(HttpMethod.POST, "/reservation-api/v1/reservations/*/cancel").hasAnyRole(CLIENTE, ADMIN)
+                        .requestMatchers("/reservation-api/v1/reservations/me", "/reservation-api/v1/reservations/me/**").hasRole(CLIENTE)
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
