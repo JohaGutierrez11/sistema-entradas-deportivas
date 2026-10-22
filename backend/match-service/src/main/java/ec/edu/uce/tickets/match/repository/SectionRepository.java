@@ -15,4 +15,6 @@ public interface SectionRepository extends JpaRepository<Section, Long> {
 
     @Query("SELECT COALESCE(SUM(s.capacity), 0) FROM Section s WHERE s.stadium.id = :stadiumId")
     long sumCapacityByStadiumId(@Param("stadiumId") Long stadiumId);
+
+
 }

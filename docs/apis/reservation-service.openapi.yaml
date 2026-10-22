@@ -76,6 +76,8 @@ tags:
     description: QR de cada entrada como imagen (HU-18) y entradas en PDF (HU-37)
   - name: Mis reservas
     description: Historial del cliente en JSON y en PDF (HU-20)
+  - name: Reportes
+    description: Reporte consolidado del administrador con filtros e indicadores de ocupación (HU-21)
 
 security:
   - bearerAuth: []
@@ -553,6 +555,119 @@ paths:
         '403':
           description: El token no es de un CLIENTE. Sin cuerpo.
 
+  # ------------------------------------------------------------------ Reportes
+  /reservation-api/v1/reports/reservations:
+    get:
+      tags: [Reportes]
+      summary: Reporte consolidado de reservas
+      description: |
+        Solo **ADMIN** (HU-21). Todos los filtros son opcionales y combinables.
+
+        - `from` / `to`: rango de la **fecha en que se hizo la reserva** (`createdAt`), ambos
+          inclusive. `to` incluye el día completo (hasta las 23:59:59).
+        - `matchId`: un partido. `status`: un estado de reserva.
+
+        **Resumen**: total de reservas, reservas por estado (todos los estados, aunque sean 0),
+        entradas vendidas (`ACTIVO` + `UTILIZADO`) y entradas anuladas, siempre sobre las reservas
+        filtradas.
+
+        **Ocupación por partido y por sección**: para cada partido que aparece en el resultado,
+        la ocupación **actual** = asientos vendidos (`RESERVED`) / capacidad del estadio (suma de
+        sus secciones). No depende de los filtros de fecha o estado: es una foto del momento.
+        La calcula match-service con los asientos vendidos que le envía este servicio.
+        Si match-service no responde, el reporte sale igual con `match` y `occupancy` en `null`.
+      operationId: getReservationsReport
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date, example: '2026-10-01' } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date, example: '2026-10-31' } }
+        - { name: matchId, in: query, required: false, schema: { type: integer, format: int64, minimum: 1, example: 1 } }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ReservationStatus' }
+      responses:
+        '200':
+          description: Reporte (con listas vacías si nada coincide)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReport' }
+              example:
+                filters: { from: '2026-10-01', to: '2026-10-31', matchId: null, status: null }
+                generatedAt: '2026-10-22T17:30:00'
+                summary:
+                  totalReservations: 7
+                  byStatus: { PENDIENTE: 1, CONFIRMADA: 3, CANCELADA: 2, EXPIRADA: 1 }
+                  ticketsSold: 12
+                  ticketsAnnulled: 2
+                matches:
+                  - matchId: 1
+                    match: { name: El Nacional vs Barcelona SC, matchDate: '2026-11-07', matchTime: '15:30', stadiumName: Estadio Olímpico Atahualpa }
+                    reservations: 4
+                    occupancy:
+                      capacity: 122
+                      occupied: 8
+                      percentage: 6.6
+                      sections:
+                        - { name: Palco Occidental, sectionType: PALCOS, capacity: 10, occupied: 6, percentage: 60.0 }
+                        - { name: Preferencia Occidental, sectionType: PREFERENCIA, capacity: 24, occupied: 2, percentage: 8.3 }
+                        - { name: Tribuna Oriental, sectionType: TRIBUNAS, capacity: 40, occupied: 0, percentage: 0.0 }
+                        - { name: General Norte, sectionType: GENERAL, capacity: 48, occupied: 0, percentage: 0.0 }
+        '400':
+          description: Parámetro con formato inválido (fecha, estado o id)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un ADMIN. Sin cuerpo.
+        '422':
+          description: '`from` es posterior a `to`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Unprocessable Content, status: 422, detail: La fecha inicial no puede ser posterior a la fecha final, instance: /reservation-api/v1/reports/reservations }
+
+  /reservation-api/v1/reports/reservations/pdf:
+    get:
+      tags: [Reportes]
+      summary: Reporte consolidado en PDF
+      description: |
+        Solo **ADMIN** (HU-21). El **mismo** reporte que `GET /reports/reservations`, con los mismos
+        filtros, dibujado como PDF horizontal: tarjetas con los totales, reservas por estado y, por
+        cada partido, la tabla de secciones con capacidad, vendidos, porcentaje y barra de ocupación.
+        Como sale de la misma función, el JSON y el PDF nunca muestran números distintos.
+      operationId: getReservationsReportPdf
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date, example: '2026-10-01' } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date, example: '2026-10-31' } }
+        - { name: matchId, in: query, required: false, schema: { type: integer, format: int64, minimum: 1, example: 1 } }
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ReservationStatus' }
+      responses:
+        '200':
+          description: Documento PDF
+          headers:
+            Content-Disposition:
+              schema: { type: string, example: 'attachment; filename="reporte-reservas-2026-10-22.pdf"' }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '400':
+          description: Parámetro con formato inválido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un ADMIN. Sin cuerpo.
+        '422':
+          description: '`from` es posterior a `to`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ------------------------------------------------------------------ Tickets
   /reservation-api/v1/tickets/{publicId}/qr:
     get:
@@ -703,6 +818,52 @@ components:
           type: array
           description: Vacío mientras la reserva está PENDIENTE; se llena al confirmar (HU-18)
           items: { $ref: '#/components/schemas/TicketResponse' }
+
+    AdminReport:
+      type: object
+      properties:
+        filters:
+          type: object
+          properties:
+            from: { type: string, format: date, nullable: true }
+            to: { type: string, format: date, nullable: true }
+            matchId: { type: integer, format: int64, nullable: true }
+            status: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time }
+        summary:
+          type: object
+          properties:
+            totalReservations: { type: integer }
+            byStatus: { type: object, additionalProperties: { type: integer } }
+            ticketsSold: { type: integer }
+            ticketsAnnulled: { type: integer }
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              matchId: { type: integer, format: int64 }
+              match:
+                allOf: [ { $ref: '#/components/schemas/MatchSummary' } ]
+                nullable: true
+              reservations: { type: integer }
+              occupancy:
+                type: object
+                nullable: true
+                properties:
+                  capacity: { type: integer }
+                  occupied: { type: integer }
+                  percentage: { type: number }
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        sectionType: { type: string }
+                        capacity: { type: integer }
+                        occupied: { type: integer }
+                        percentage: { type: number }
 
     MyReservationItem:
       type: object

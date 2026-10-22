@@ -1,5 +1,7 @@
 package ec.edu.uce.tickets.match.controller;
 
+import ec.edu.uce.tickets.match.dto.MatchOccupancyResponse;
+import ec.edu.uce.tickets.match.dto.OccupancyRequest;
 import ec.edu.uce.tickets.match.dto.SeatValidationRequest;
 import ec.edu.uce.tickets.match.dto.SeatValidationResponse;
 import ec.edu.uce.tickets.match.service.InternalSeatService;
@@ -24,5 +26,13 @@ public class InternalController {
             @Valid @RequestBody SeatValidationRequest request) {
         internalSeatService.checkInternalKey(internalKey);
         return internalSeatService.validateSeats(request);
+    }
+    @PostMapping("/matches/{matchId}/occupancy")
+    public MatchOccupancyResponse occupancy(
+            @RequestHeader(value = "X-Internal-Key", required = false) String internalKey,
+            @PathVariable Long matchId,
+            @Valid @RequestBody OccupancyRequest request) {
+        internalSeatService.checkInternalKey(internalKey);
+        return internalSeatService.occupancy(matchId, request);
     }
 }
