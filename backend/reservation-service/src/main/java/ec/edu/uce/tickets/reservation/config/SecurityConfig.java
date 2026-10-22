@@ -15,8 +15,12 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @SuppressWarnings("java:S4502")
+    public SecurityFilterChain securityFilterChain(HttpSecurity http){
         http
+                // CSRF desactivado A PROPÓSITO (revisado, java:S4502): API sin estado con JWT en el header
+                // Authorization. El navegador no envía ese header por su cuenta, así que un sitio ajeno
+                // no puede falsificar peticiones. Si algún día el token viaja en una cookie, hay que reactivarlo.
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
