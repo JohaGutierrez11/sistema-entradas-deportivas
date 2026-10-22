@@ -72,6 +72,19 @@ public class Reservation {
         this.seatLocks.clear();
     }
 
+    /** Cancela la reserva: libera los asientos y anula los tickets. */
+    public void cancel(LocalDateTime now) {
+        this.status = ReservationStatus.CANCELADA;
+        this.cancelledAt = now;
+        this.seatLocks.clear();                                         // orphanRemoval → DELETE
+        this.tickets.forEach(ticket -> ticket.setStatus(TicketStatus.ANULADO));
+    }
+
+    /** ¿Alguna entrada ya se usó en la puerta del estadio? */
+    public boolean hasUsedTickets() {
+        return tickets.stream().anyMatch(ticket -> ticket.getStatus() == TicketStatus.UTILIZADO);
+    }
+
     @PrePersist
     void onCreate() {
         if (publicId == null) {

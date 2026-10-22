@@ -163,4 +163,30 @@ public class ReservationWriter {
         } while (reservationRepository.existsByCode(code));
         return code;
     }
+
+    // ------------------------------------------------------------------ HU-19: cancelar
+
+    @Transactional
+    public ReservationResponse cancel(UUID publicId, Long clientId, boolean admin) {
+        // Mismo bloqueo que confirmar: cancelar, confirmar y expirar nunca se pisan
+        Reservation reservation = reservationRepository.findByPublicIdForUpdate(publicId)
+                .filter(r -> admin || r.getClientId().equals(clientId))
+                .orElseThrow(() -> new ResourceNotFoundException("No existe la reserva " + publicId));
+
+        LocalDateTime now = LocalDateTime.now(ECUADOR);
+        ReservationStatus status = reservation.getStatus();
+
+        if (status == ReservationStatus.CANCELADA || status == ReservationStatus.EXPIRADA) {
+            throw new ResourceInUseException("La reserva ya está " + status);
+        }
+        if (status == ReservationStatus.PENDIENTE && !reservation.getExpiresAt().isAfter(now)) {
+            throw new ResourceInUseException("La reserva ya venció; sus asientos se liberan solos");
+        }
+        if (reservation.hasUsedTickets()) {
+            throw new ResourceInUseException("No se puede cancelar porque al menos una entrada ya fue utilizada");
+        }
+
+        reservation.cancel(now);
+        return ReservationResponse.from(reservationRepository.saveAndFlush(reservation));
+    }
 }
