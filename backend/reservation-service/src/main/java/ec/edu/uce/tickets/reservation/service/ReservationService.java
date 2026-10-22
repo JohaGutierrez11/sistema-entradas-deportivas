@@ -13,6 +13,7 @@ import ec.edu.uce.tickets.reservation.repository.ReservationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -93,5 +94,13 @@ public class ReservationService {
         }
 
         return reservationWriter.cancel(publicId, clientId, admin);
+    }
+
+    /** Todas las reservas de un cliente, de la más nueva a la más antigua. */
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> findByClient(Long clientId) {
+        return reservationRepository.findByClientIdOrderByCreatedAtDesc(clientId).stream()
+                .map(ReservationResponse::from)
+                .toList();
     }
 }

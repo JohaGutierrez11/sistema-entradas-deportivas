@@ -37,6 +37,7 @@ info:
     | Solo el dueño confirma, y solo si está `PENDIENTE` y no venció | HU-18 | `404` / `409` |
     | Al confirmar, el partido debe seguir `PROGRAMADO` | match-service | `422` |
     | Un ticket por asiento, con un código QR aleatorio de 64 caracteres | HU-18 | — |
+    | "Mis reservas" solo muestra las del cliente del token; el ADMIN no tiene "mis reservas" | HU-20 | `403` |
     | Cancelar: el dueño o un ADMIN; no si está cancelada, expirada, con entradas usadas (`409`) o el partido ya empezó (`422`) | HU-19 | `404` / `409` / `422` |
 
     **Asiento ocupado** = vendido (`RESERVED`) **o** retenido (`HELD`) por una reserva que aún no vence.
@@ -72,7 +73,9 @@ tags:
   - name: Reservas
     description: Crear, consultar, confirmar y cancelar reservas (HU-16, HU-18, HU-19)
   - name: Tickets
-    description: Imagen del código QR de cada entrada (HU-18)
+    description: QR de cada entrada como imagen (HU-18) y entradas en PDF (HU-37)
+  - name: Mis reservas
+    description: Historial del cliente en JSON y en PDF (HU-20)
 
 security:
   - bearerAuth: []
@@ -443,6 +446,113 @@ paths:
               example: { type: about:blank, title: Unprocessable Content, status: 422, detail: No se puede cancelar porque el partido está FINALIZADO, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42/cancel }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
+  /reservation-api/v1/reservations/{publicId}/tickets/pdf:
+    get:
+      tags: [Tickets]
+      summary: Mis entradas en PDF (una por página, con QR)
+      description: |
+        Dueño de la reserva o ADMIN (HU-37). Un PDF tipo "pase de abordar": **una página por
+        cada ticket `ACTIVO`**, con partido, estadio, fecha y hora, asiento, código de reserva y
+        la imagen del código QR. Los tickets `ANULADO` no se imprimen.
+
+        Si match-service no responde, el PDF se genera igual con "Partido #id".
+        ⚠️ El QR es la credencial de entrada: quien tenga el PDF puede entrar con él.
+      operationId: getTicketsPdf
+      parameters:
+        - $ref: '#/components/parameters/ReservationPublicId'
+      responses:
+        '200':
+          description: Documento PDF
+          headers:
+            Content-Disposition:
+              schema: { type: string, example: 'attachment; filename="entradas-RES-2026-K7P4QX.pdf"' }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: No existe, o pertenece a otro cliente
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: La reserva no tiene entradas activas (pendiente, cancelada o expirada)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example: { type: about:blank, title: Conflict, status: 409, detail: La reserva no tiene entradas activas para imprimir, instance: /reservation-api/v1/reservations/3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42/tickets/pdf }
+
+  # ------------------------------------------------------------------ Mis reservas
+  /reservation-api/v1/reservations/me:
+    get:
+      tags: [Mis reservas]
+      summary: Historial de mis reservas
+      description: |
+        Solo rol **CLIENTE** (HU-20). Todas las reservas del cliente del token, de la más nueva a
+        la más antigua y en cualquier estado, con los datos del partido.
+
+        Los datos del partido se piden a match-service **una vez por partido distinto**. Si
+        match-service no responde, la lista igual se devuelve con `match: null`
+        (**degradación elegante**): el historial es del cliente y vive en este servicio.
+
+        `seatIds` queda vacío en reservas canceladas o expiradas (los bloqueos se liberan); en las
+        que se confirmaron, los asientos siguen visibles en `tickets[]`.
+      operationId: getMyReservations
+      responses:
+        '200':
+          description: Historial (lista vacía si no tiene reservas)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MyReservationItem' }
+              example:
+                - reservation:
+                    publicId: 3f6c2a1e-8b4d-4c7a-9e21-5d0b7a9c1f42
+                    code: RES-2026-K7P4QX
+                    matchId: 1
+                    status: CONFIRMADA
+                    createdAt: '2026-10-21T14:30:00'
+                    expiresAt: '2026-10-21T14:40:00'
+                    confirmedAt: '2026-10-21T14:34:12'
+                    cancelledAt: null
+                    seatIds: [13, 14]
+                    tickets:
+                      - { publicId: 7a1d9c3e-2f4b-4e8a-b6c1-0d9e8f7a6b5c, seatId: 13, qrCode: 9f2c7d1a4b8e4f0a9c3d5e7f1a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d0e2f4a6b, status: ACTIVO }
+                  match:
+                    name: El Nacional vs Barcelona SC
+                    matchDate: '2026-11-07'
+                    matchTime: '15:30'
+                    stadiumName: Estadio Olímpico Atahualpa
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un CLIENTE (el ADMIN no tiene reservas propias). Sin cuerpo.
+
+  /reservation-api/v1/reservations/me/pdf:
+    get:
+      tags: [Mis reservas]
+      summary: Mis reservas en PDF
+      description: |
+        Solo rol **CLIENTE** (HU-20). El mismo historial como documento PDF descargable
+        (`Content-Disposition: attachment; filename="mis-reservas.pdf"`): resumen por estado y una
+        tabla con código, partido, fecha, estado y entradas. Generado con OpenPDF.
+
+        Si match-service no responde, el PDF se genera igual y el partido aparece como
+        "Partido #id (información no disponible)".
+      operationId: getMyReservationsPdf
+      responses:
+        '200':
+          description: Documento PDF
+          headers:
+            Content-Disposition:
+              schema: { type: string, example: 'attachment; filename="mis-reservas.pdf"' }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un CLIENTE. Sin cuerpo.
+
   # ------------------------------------------------------------------ Tickets
   /reservation-api/v1/tickets/{publicId}/qr:
     get:
@@ -593,6 +703,23 @@ components:
           type: array
           description: Vacío mientras la reserva está PENDIENTE; se llena al confirmar (HU-18)
           items: { $ref: '#/components/schemas/TicketResponse' }
+
+    MyReservationItem:
+      type: object
+      properties:
+        reservation: { $ref: '#/components/schemas/ReservationResponse' }
+        match:
+          allOf: [ { $ref: '#/components/schemas/MatchSummary' } ]
+          nullable: true
+          description: '`null` si match-service no respondió'
+
+    MatchSummary:
+      type: object
+      properties:
+        name: { type: string, example: El Nacional vs Barcelona SC }
+        matchDate: { type: string, format: date, example: '2026-11-07' }
+        matchTime: { type: string, example: '15:30' }
+        stadiumName: { type: string, example: Estadio Olímpico Atahualpa }
 
     ReservationStatus:
       type: string
