@@ -66,6 +66,12 @@ public class Reservation {
         ticket.setReservation(this);
     }
 
+    /** Vence la reserva y libera sus asientos (orphanRemoval borra los seat_lock). */
+    public void expire() {
+        this.status = ReservationStatus.EXPIRADA;
+        this.seatLocks.clear();
+    }
+
     @PrePersist
     void onCreate() {
         if (publicId == null) {
@@ -75,4 +81,5 @@ public class Reservation {
             createdAt = LocalDateTime.now(ZoneId.of("America/Guayaquil"));
         }
     }
+
 }

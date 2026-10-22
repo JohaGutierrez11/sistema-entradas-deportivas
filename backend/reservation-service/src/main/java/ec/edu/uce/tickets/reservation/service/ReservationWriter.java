@@ -1,5 +1,6 @@
 package ec.edu.uce.tickets.reservation.service;
 
+import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
 import ec.edu.uce.tickets.reservation.entity.*;
 import ec.edu.uce.tickets.reservation.exception.BusinessRuleException;
 import ec.edu.uce.tickets.reservation.exception.ResourceInUseException;
@@ -16,18 +17,21 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Operaciones de escritura sobre reservas, cada una en su propia transacción.
+ * Regla: los métodos públicos devuelven DTOs (no entidades), construidos con la sesión abierta.
+ */
 @Service
 public class ReservationWriter {
 
     private static final ZoneId ECUADOR = ZoneId.of("America/Guayaquil");
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-
     private final ReservationRepository reservationRepository;
     private final SeatLockRepository seatLockRepository;
     private final ParameterService parameterService;
-    private final SecureRandom random = new SecureRandom();
     private final QrCodeGenerator qrCodeGenerator;
+    private final SecureRandom random = new SecureRandom();
 
     public ReservationWriter(ReservationRepository reservationRepository, SeatLockRepository seatLockRepository,
                              ParameterService parameterService, QrCodeGenerator qrCodeGenerator) {
@@ -37,8 +41,10 @@ public class ReservationWriter {
         this.qrCodeGenerator = qrCodeGenerator;
     }
 
+    // ------------------------------------------------------------------ HU-16: reservar
+
     @Transactional
-    public Reservation createPending(Long clientId, Long matchId, Set<Long> seatIds) {
+    public ReservationResponse createPending(Long clientId, Long matchId, Set<Long> seatIds) {
         LocalDateTime now = LocalDateTime.now(ECUADOR);
 
         // 4. Liberar reservas vencidas de este partido (por si la tarea automática aún no pasó)
@@ -77,37 +83,13 @@ public class ReservationWriter {
         }
 
         // saveAndFlush: si dos clientes chocan en el mismo asiento, el UNIQUE falla AQUÍ → 409
-        return reservationRepository.saveAndFlush(reservation);
+        return ReservationResponse.from(reservationRepository.saveAndFlush(reservation));
     }
 
-    /** Marca como EXPIRADAS las reservas pendientes vencidas de un partido y libera sus asientos. */
-    private void expirePending(Long matchId, LocalDateTime now) {
-        List<Reservation> expired = reservationRepository
-                .findByMatchIdAndStatusAndExpiresAtLessThanEqual(matchId, ReservationStatus.PENDIENTE, now);
-        for (Reservation reservation : expired) {
-            reservation.setStatus(ReservationStatus.EXPIRADA);
-            reservation.getSeatLocks().clear();   // orphanRemoval → DELETE de sus seat_lock
-        }
-        // Hibernate hace INSERT antes que DELETE: forzamos los DELETE ahora
-        reservationRepository.flush();
-    }
-
-    /** "RES-2026-K7P4QX": legible para personas, aleatorio y no secuencial. */
-    private String generateCode(LocalDateTime now) {
-        String prefix = parameterService.getString("RESERVATION_CODE_PREFIX");
-        String code;
-        do {
-            StringBuilder random6 = new StringBuilder();
-            for (int i = 0; i < 6; i++) {
-                random6.append(CODE_CHARS.charAt(random.nextInt(CODE_CHARS.length())));
-            }
-            code = prefix + "-" + now.getYear() + "-" + random6;
-        } while (reservationRepository.existsByCode(code));
-        return code;
-    }
+    // ------------------------------------------------------------------ HU-18: confirmar
 
     @Transactional
-    public Reservation confirm(UUID publicId, Long clientId) {
+    public ReservationResponse confirm(UUID publicId, Long clientId) {
         // Bloqueo: si llegan dos "confirmar" a la vez, la segunda espera aquí
         Reservation reservation = reservationRepository.findByPublicIdForUpdate(publicId)
                 .filter(r -> r.getClientId().equals(clientId))
@@ -135,6 +117,50 @@ public class ReservationWriter {
             reservation.addTicket(ticket);
         }
 
-        return reservationRepository.saveAndFlush(reservation);
+        // La respuesta se arma AQUÍ, con la sesión abierta (evita LazyInitializationException)
+        return ReservationResponse.from(reservationRepository.saveAndFlush(reservation));
+    }
+
+    // ------------------------------------------------------------------ HU-17: expiración
+
+    /** Lo llama la tarea programada (desde OTRA clase, así que @Transactional sí aplica). */
+    @Transactional
+    public List<String> expireAllPending() {
+        LocalDateTime now = LocalDateTime.now(ECUADOR);
+        List<Reservation> expired = reservationRepository
+                .findExpiredForUpdate(ReservationStatus.PENDIENTE, now);
+
+        for (Reservation reservation : expired) {
+            reservation.expire();
+        }
+        // No hace falta save: dirty checking guarda los cambios al terminar la transacción
+        return expired.stream().map(Reservation::getCode).toList();
+    }
+
+    /** Corre dentro de la transacción de quien la llama (createPending). */
+    private void expirePending(Long matchId, LocalDateTime now) {
+        List<Reservation> expired = reservationRepository
+                .findByMatchIdAndStatusAndExpiresAtLessThanEqual(matchId, ReservationStatus.PENDIENTE, now);
+        for (Reservation reservation : expired) {
+            reservation.expire();
+        }
+        // Hibernate hace INSERT antes que DELETE: forzamos los DELETE ahora
+        reservationRepository.flush();
+    }
+
+    // ------------------------------------------------------------------ utilidades
+
+    /** "RES-2026-K7P4QX": legible para personas, aleatorio y no secuencial. */
+    private String generateCode(LocalDateTime now) {
+        String prefix = parameterService.getString("RESERVATION_CODE_PREFIX");
+        String code;
+        do {
+            StringBuilder random6 = new StringBuilder();
+            for (int i = 0; i < 6; i++) {
+                random6.append(CODE_CHARS.charAt(random.nextInt(CODE_CHARS.length())));
+            }
+            code = prefix + "-" + now.getYear() + "-" + random6;
+        } while (reservationRepository.existsByCode(code));
+        return code;
     }
 }

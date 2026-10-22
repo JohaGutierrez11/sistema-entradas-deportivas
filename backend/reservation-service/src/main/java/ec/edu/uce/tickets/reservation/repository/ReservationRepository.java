@@ -24,4 +24,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM Reservation r WHERE r.publicId = :publicId")
     Optional<Reservation> findByPublicIdForUpdate(@Param("publicId") UUID publicId);
+
+    /** Todas las reservas pendientes ya vencidas, BLOQUEADAS para que nadie las confirme mientras tanto. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Reservation r WHERE r.status = :status AND r.expiresAt <= :now")
+    List<Reservation> findExpiredForUpdate(@Param("status") ReservationStatus status,
+                                           @Param("now") LocalDateTime now);
 }

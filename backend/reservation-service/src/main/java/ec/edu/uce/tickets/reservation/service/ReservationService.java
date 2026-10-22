@@ -42,8 +42,7 @@ public class ReservationService {
         }
 
         // 4 a 7. Reglas locales y creación, dentro de la transacción (en OTRA clase)
-        Reservation reservation = reservationWriter.createPending(clientId, request.matchId(), request.seatIds());
-        return ReservationResponse.from(reservation);
+        return reservationWriter.createPending(clientId, request.matchId(), request.seatIds());
     }
 
     @Transactional(readOnly = true)
@@ -70,6 +69,6 @@ public class ReservationService {
             throw new BusinessRuleException("El partido está " + match.status() + " y ya no admite confirmaciones");
         }
 
-        return ReservationResponse.from(reservationWriter.confirm(publicId, clientId));
+        return reservationWriter.confirm(publicId, clientId);
     }
 }
