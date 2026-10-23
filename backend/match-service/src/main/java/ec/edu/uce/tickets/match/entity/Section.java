@@ -42,6 +42,10 @@ public class Section {
     @Column(name = "capacity", nullable = false)
     private Integer capacity;
 
+    /** Recuadro sobre el plano. null = la sección todavía no está ubicada. */
+    @Embedded
+    private SectionBox box;
+
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("letter ASC")
     private List<SeatRow> rows = new ArrayList<>();
