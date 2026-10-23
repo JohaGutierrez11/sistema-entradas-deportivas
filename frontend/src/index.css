@@ -128,7 +128,6 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 
 /* =================================================================== Catálogo */
 .page-header { margin-bottom: 1rem; }
-.capitalize { text-transform: capitalize; }
 
 .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem 1.25rem; }
 .filter-field label { margin-top: 0; }
@@ -278,7 +277,7 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 /* =================================================================== Mis reservas */
 .page-header-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .page-header-row h1 { margin: 0; }
-.segmented { display: inline-flex; gap: 0.25rem; padding: 0.25rem; background: var(--gray-100); border-radius: 10px; margin-bottom: 1rem; }
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem; background: var(--gray-100); border-radius: 10px; margin-bottom: 1rem; }
 .segmented button { border: none; background: none; font: inherit; padding: 0.45rem 0.9rem; border-radius: 8px; cursor: pointer; color: var(--gray-600); font-weight: 500; }
 .segmented button.is-active { background: #fff; color: var(--blue-900); box-shadow: var(--shadow); }
 .segmented .count { display: inline-block; min-width: 1.4rem; padding: 0 0.35rem; margin-left: 0.25rem; border-radius: 999px; background: var(--gray-200); font-size: 0.75rem; }
@@ -344,3 +343,9 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .report-sections td, .report-sections th { padding: 0.45rem 0.5rem; }
 .bar-col { width: 40%; }
 .seat-names { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+
+/* Inicio del administrador */
+.module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.module-card { display: flex; flex-direction: column; gap: 0.35rem; text-decoration: none; color: inherit; transition: border-color 0.15s; }
+.module-card:hover { border-color: var(--blue-600); }
+.module-card strong { color: var(--blue-900); }

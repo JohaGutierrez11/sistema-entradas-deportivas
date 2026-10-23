@@ -1,10 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import HomeRoute from './auth/HomeRoute';
 import ProtectedRoute from './auth/ProtectedRoute';
 import Layout from './components/Layout';
-import Placeholder from './components/Placeholder';
 import ChangePasswordPage from './pages/client/ChangePasswordPage';
 import MyReservationsPage from './pages/client/MyReservationsPage';
 import ReservationDetailPage from './pages/client/ReservationDetailPage';
+import AdminHomePage from './pages/admin/AdminHomePage';
 import MatchesAdminPage from './pages/admin/MatchesAdminPage';
 import ReportsAdminPage from './pages/admin/ReportsAdminPage';
 import UsersAdminPage from './pages/admin/UsersAdminPage';
@@ -13,7 +14,6 @@ import StadiumsAdminPage from './pages/admin/StadiumsAdminPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import LoginPage from './pages/public/LoginPage';
 import MatchDetailPage from './pages/public/MatchDetailPage';
-import MatchesPage from './pages/public/MatchesPage';
 import RegisterPage from './pages/public/RegisterPage';
 
 export default function App() {
@@ -26,7 +26,7 @@ export default function App() {
       {/* Con menú */}
       <Route element={<Layout />}>
         {/* Públicas */}
-        <Route path="/" element={<MatchesPage />} />
+        <Route path="/" element={<HomeRoute />} />
         <Route path="/partidos/:matchId" element={<MatchDetailPage />} />
         <Route path="/acceso-denegado" element={<ForbiddenPage />} />
 
@@ -43,7 +43,7 @@ export default function App() {
 
         {/* Solo ADMIN */}
         <Route element={<ProtectedRoute roles={['ADMIN']} />}>
-          <Route path="/admin" element={<Placeholder title="Panel del administrador" />} />
+          <Route path="/admin" element={<AdminHomePage />} />
           <Route path="/admin/estadios" element={<StadiumsAdminPage />} />
           <Route path="/admin/estadios/:stadiumId" element={<StadiumSectionsPage />} />
           <Route path="/admin/partidos" element={<MatchesAdminPage />} />

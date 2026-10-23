@@ -93,7 +93,7 @@ export default function ReservationDetailPage() {
         <div>
           <h1>Reserva {reservation.code}</h1>
           {match && (
-            <p className="match-when capitalize">
+            <p className="match-when">
               {match.name} · {formatMatchDate(match.matchDate)} · {match.matchTime} · {match.stadium.name}
             </p>
           )}

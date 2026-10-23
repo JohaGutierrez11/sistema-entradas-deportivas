@@ -5,15 +5,25 @@ import StatusBadge from '../../components/StatusBadge';
 import { downloadBlob } from '../../utils/download';
 import { formatDateTime, formatMatchDate, parseEcuadorDateTime } from '../../utils/format';
 
-/** Filtros de la lista: se calculan en el front porque un cliente tiene pocas reservas. */
-const FILTERS = [
-  { id: 'active', label: 'Activas', matches: (status) => status === 'PENDIENTE' || status === 'CONFIRMADA' },
-  { id: 'history', label: 'Historial', matches: (status) => status === 'CANCELADA' || status === 'EXPIRADA' },
-  { id: 'all', label: 'Todas', matches: () => true },
-];
+const isActive = (status) => status === 'PENDIENTE' || status === 'CONFIRMADA';
 
-/** Solo la primera letra: `text-transform: capitalize` daría "8 De Noviembre". */
-const capitalizeFirst = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+/** ¿El partido ya empezó? Sin datos del partido (match-service caído) se asume que no. */
+function hasStarted(match) {
+  return Boolean(match) && parseEcuadorDateTime(`${match.matchDate}T${match.matchTime}:00`).getTime() <= Date.now();
+}
+
+/**
+ * Filtros de la lista (en el front: un cliente tiene pocas reservas). "Historial" es TODO:
+ * un historial que esconde las canceladas no es un historial.
+ */
+const FILTERS = [
+  // Una PENDIENTE siempre es próxima: si el partido empezó, igual vence al cierre de la venta (HU-40)
+  { id: 'upcoming', label: 'Próximas',
+    matches: (item) => item.status === 'PENDIENTE' || (item.status === 'CONFIRMADA' && !hasStarted(item.match)) },
+  { id: 'played', label: 'Partidos vistos', matches: (item) => item.status === 'CONFIRMADA' && hasStarted(item.match) },
+  { id: 'inactive', label: 'Canceladas y vencidas', matches: (item) => !isActive(item.status) },
+  { id: 'all', label: 'Historial', matches: () => true },
+];
 
 /** Una PENDIENTE ya vencida se muestra como EXPIRADA aunque la tarea automática aún no haya pasado. */
 function effectiveStatus(reservation) {
@@ -26,7 +36,7 @@ function effectiveStatus(reservation) {
 export default function MyReservationsPage() {
   const [items, setItems] = useState(null);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('active');
+  const [filter, setFilter] = useState('upcoming');
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
@@ -42,10 +52,10 @@ export default function MyReservationsPage() {
     [items],
   );
   const counts = useMemo(
-    () => Object.fromEntries(FILTERS.map((f) => [f.id, withStatus.filter((item) => f.matches(item.status)).length])),
+    () => Object.fromEntries(FILTERS.map((f) => [f.id, withStatus.filter((item) => f.matches(item)).length])),
     [withStatus],
   );
-  const visible = withStatus.filter((item) => FILTERS.find((f) => f.id === filter).matches(item.status));
+  const visible = withStatus.filter((item) => FILTERS.find((f) => f.id === filter).matches(item));
 
   async function downloadPdf() {
     setError(null);
@@ -108,11 +118,11 @@ export default function MyReservationsPage() {
                         </p>
                         <p className="muted">
                           {match
-                            ? `${capitalizeFirst(formatMatchDate(match.matchDate))} · ${match.matchTime} · ${match.stadiumName}`
+                            ? `${formatMatchDate(match.matchDate)} · ${match.matchTime} · ${match.stadiumName}`
                             : 'Información del partido no disponible'}
                         </p>
                         <p className="muted small">
-                          {reservation.code} · {seats} {seats === 1 ? 'asiento' : 'asientos'}
+                          {reservation.code} · {seats === 0 ? 'asientos liberados' : `${seats} ${seats === 1 ? 'asiento' : 'asientos'}`}
                           {status === 'PENDIENTE' && ` · vence ${formatDateTime(reservation.expiresAt)}`}
                         </p>
                       </div>
