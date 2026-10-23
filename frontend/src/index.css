@@ -286,7 +286,8 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .data-table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-.row-actions { display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+/* Sin salto de línea: en pantallas angostas la tabla se desplaza (table-card tiene overflow-x) */
+.row-actions { display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
 .capacity { margin-bottom: 1rem; }
 .capacity p { margin: 0.35rem 0 0; }
 .capacity-bar { height: 8px; background: var(--gray-100); border-radius: 999px; overflow: hidden; }
