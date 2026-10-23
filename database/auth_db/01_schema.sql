@@ -1,6 +1,6 @@
 -- =====================================================================
--- match_db · ms-partidos
--- Esquema: stadium, section, seat_row, seat, sport_match
+-- auth_db · ms-usuarios
+-- Esquema: role, app_user, client
 -- HU-03 · Script SQL de creación
 --
 -- El script se puede ejecutar varias veces: borra las tablas antes de
@@ -10,122 +10,122 @@
 -- Los archivos están en UTF-8 (tildes y ñ en comentarios y datos).
 SET client_encoding = 'UTF8';
 
-DROP TABLE IF EXISTS sport_match CASCADE;
-DROP TABLE IF EXISTS seat        CASCADE;
-DROP TABLE IF EXISTS seat_row    CASCADE;
-DROP TABLE IF EXISTS section     CASCADE;
-DROP TABLE IF EXISTS stadium     CASCADE;
+DROP TABLE IF EXISTS audit_log CASCADE;
+DROP TABLE IF EXISTS client   CASCADE;
+DROP TABLE IF EXISTS app_user CASCADE;
+DROP TABLE IF EXISTS role     CASCADE;
 
 -- ---------------------------------------------------------------------
--- stadium: escenario deportivo
+-- role: perfiles de acceso (ADMIN, CLIENTE)
 -- ---------------------------------------------------------------------
-CREATE TABLE stadium (
-    id             BIGSERIAL    NOT NULL,
-    name           VARCHAR(100) NOT NULL,
-    description    VARCHAR(250),
-    location       VARCHAR(200) NOT NULL,
-    total_capacity INT          NOT NULL,
+CREATE TABLE role (
+    id          BIGSERIAL     NOT NULL,
+    name        VARCHAR(30)   NOT NULL,
+    description VARCHAR(150),
+    status      VARCHAR(10)   NOT NULL DEFAULT 'ACTIVO',
 
-    CONSTRAINT pk_stadium          PRIMARY KEY (id),
-    CONSTRAINT uk_stadium_name     UNIQUE (name),
-    CONSTRAINT ck_stadium_capacity CHECK (total_capacity > 0)
+    CONSTRAINT pk_role        PRIMARY KEY (id),
+    CONSTRAINT uk_role_name   UNIQUE (name),
+    CONSTRAINT ck_role_status CHECK (status IN ('ACTIVO', 'INACTIVO'))
 );
 
--- ---------------------------------------------------------------------
--- section: localidad del estadio
--- capacity se guarda porque el enunciado lo pide, y el CHECK impide
--- que contradiga a row_count * seats_per_row.
--- ---------------------------------------------------------------------
-CREATE TABLE section (
-    id            BIGSERIAL    NOT NULL,
-    stadium_id    BIGINT       NOT NULL,
-    name          VARCHAR(50)  NOT NULL,
-    description   VARCHAR(250),
-    section_type  VARCHAR(15)  NOT NULL,
-    row_count     INT          NOT NULL,
-    seats_per_row INT          NOT NULL,
-    capacity      INT          NOT NULL,
-    -- Recuadro sobre el plano del estadio (HU-38), en % del plano (0 a 100).
-    -- Los cuatro van juntos: o la sección está ubicada, o no lo está.
-    pos_x         INT,
-    pos_y         INT,
-    width         INT,
-    height        INT,
+COMMENT ON TABLE role IS 'Perfiles de acceso. Un usuario tiene un solo rol (segregación de funciones).';
 
-    CONSTRAINT pk_section               PRIMARY KEY (id),
-    CONSTRAINT fk_section_stadium       FOREIGN KEY (stadium_id) REFERENCES stadium (id) ON DELETE RESTRICT,
-    CONSTRAINT uk_section_stadium_name  UNIQUE (stadium_id, name),
-    CONSTRAINT ck_section_type          CHECK (section_type IN ('PALCOS', 'GENERAL', 'PREFERENCIA', 'TRIBUNAS')),
-    CONSTRAINT ck_section_row_count     CHECK (row_count > 0),
-    CONSTRAINT ck_section_seats_per_row CHECK (seats_per_row > 0),
-    CONSTRAINT ck_section_capacity      CHECK (capacity = row_count * seats_per_row),
-    CONSTRAINT ck_section_box_complete  CHECK ((pos_x IS NULL AND pos_y IS NULL AND width IS NULL AND height IS NULL)
-                                            OR (pos_x IS NOT NULL AND pos_y IS NOT NULL AND width IS NOT NULL AND height IS NOT NULL)),
-    CONSTRAINT ck_section_box_inside    CHECK (pos_x IS NULL OR (pos_x >= 0 AND pos_y >= 0 AND width >= 5 AND height >= 5
-                                                                AND pos_x + width <= 100 AND pos_y + height <= 100))
+-- ---------------------------------------------------------------------
+-- app_user: credenciales de acceso
+-- Se llama app_user porque "user" es palabra reservada en PostgreSQL.
+-- ---------------------------------------------------------------------
+CREATE TABLE app_user (
+    id                   BIGSERIAL    NOT NULL,
+    username             VARCHAR(50)  NOT NULL,
+    password_hash        VARCHAR(100) NOT NULL,
+    role_id              BIGINT       NOT NULL,
+    status               VARCHAR(10)  NOT NULL DEFAULT 'ACTIVO',
+    must_change_password  BOOLEAN      NOT NULL DEFAULT TRUE,
+    failed_login_attempts INT          NOT NULL DEFAULT 0,
+    locked_until          TIMESTAMP,
+    created_at            TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at         TIMESTAMP,
+
+    CONSTRAINT pk_app_user          PRIMARY KEY (id),
+    CONSTRAINT fk_app_user_role     FOREIGN KEY (role_id) REFERENCES role (id) ON DELETE RESTRICT,
+    CONSTRAINT ck_app_user_status   CHECK (status IN ('ACTIVO', 'INACTIVO', 'BLOQUEADO')),
+    CONSTRAINT ck_app_user_attempts CHECK (failed_login_attempts >= 0),
+    -- Un bloqueo siempre tiene fecha de fin: sin ella, la cuenta nunca se liberaría sola.
+    CONSTRAINT ck_app_user_locked   CHECK (status <> 'BLOQUEADO' OR locked_until IS NOT NULL),
+    CONSTRAINT ck_app_user_username CHECK (username ~ '^[A-Za-z0-9._-]{4,50}$')
 );
 
-CREATE INDEX idx_section_stadium ON section (stadium_id);
+-- Usuario único sin distinguir mayúsculas: "JGutierrez" y "jgutierrez" son el mismo.
+CREATE UNIQUE INDEX uk_app_user_username ON app_user (LOWER(username));
+CREATE INDEX idx_app_user_role ON app_user (role_id);
 
-COMMENT ON COLUMN section.capacity IS 'Siempre igual a row_count * seats_per_row (ck_section_capacity).';
-
--- ---------------------------------------------------------------------
--- seat_row: fila de una sección (A, B, C...)
--- Se llama seat_row porque "row" es palabra reservada.
--- ---------------------------------------------------------------------
-CREATE TABLE seat_row (
-    id         BIGSERIAL  NOT NULL,
-    section_id BIGINT     NOT NULL,
-    letter     VARCHAR(2) NOT NULL,
-
-    CONSTRAINT pk_seat_row                PRIMARY KEY (id),
-    CONSTRAINT fk_seat_row_section        FOREIGN KEY (section_id) REFERENCES section (id) ON DELETE RESTRICT,
-    CONSTRAINT uk_seat_row_section_letter UNIQUE (section_id, letter),
-    CONSTRAINT ck_seat_row_letter         CHECK (letter ~ '^[A-Z]{1,2}$')
-);
-
-CREATE INDEX idx_seat_row_section ON seat_row (section_id);
+COMMENT ON TABLE  app_user IS 'Cuenta de acceso. El admin es un app_user con rol ADMIN y sin fila en client.';
+COMMENT ON COLUMN app_user.password_hash        IS 'Hash BCrypt. Nunca la contraseña en texto plano.';
+COMMENT ON COLUMN app_user.status IS
+  'ACTIVO: uso normal. INACTIVO: dado de baja por el administrador (solo él lo reactiva). '
+  'BLOQUEADO: el sistema lo bloqueó por intentos fallidos; se libera solo al pasar locked_until o si el admin lo desbloquea.';
+COMMENT ON COLUMN app_user.failed_login_attempts IS 'Intentos fallidos consecutivos. Se reinicia a 0 con un login exitoso.';
+COMMENT ON COLUMN app_user.locked_until          IS 'Fin del bloqueo temporal. Obligatorio cuando status = BLOQUEADO.';
+COMMENT ON COLUMN app_user.must_change_password IS 'TRUE mientras el usuario no cambie la contraseña de primer acceso enviada por correo.';
 
 -- ---------------------------------------------------------------------
--- seat: asiento físico. NO tiene estado: el estado depende del partido
--- y vive en reservation_db.seat_lock.
+-- client: datos personales del cliente
+-- Relación 1 : 0..1 con app_user. La FK vive aquí porque todo cliente
+-- tiene usuario (participación total), así puede ser NOT NULL.
 -- ---------------------------------------------------------------------
-CREATE TABLE seat (
-    id          BIGSERIAL NOT NULL,
-    seat_row_id BIGINT    NOT NULL,
-    seat_number INT       NOT NULL,
-
-    CONSTRAINT pk_seat            PRIMARY KEY (id),
-    CONSTRAINT fk_seat_seat_row   FOREIGN KEY (seat_row_id) REFERENCES seat_row (id) ON DELETE RESTRICT,
-    CONSTRAINT uk_seat_row_number UNIQUE (seat_row_id, seat_number),
-    CONSTRAINT ck_seat_number     CHECK (seat_number > 0)
-);
-
-CREATE INDEX idx_seat_seat_row ON seat (seat_row_id);
-
-COMMENT ON TABLE seat IS 'Asiento físico. Su disponibilidad por partido está en reservation_db.seat_lock.';
-
--- ---------------------------------------------------------------------
--- sport_match: partido
--- Se llama sport_match porque "match" es palabra clave de SQL.
--- ---------------------------------------------------------------------
-CREATE TABLE sport_match (
+CREATE TABLE client (
     id          BIGSERIAL    NOT NULL,
-    name        VARCHAR(100) NOT NULL,
-    description VARCHAR(250),
-    match_date  DATE         NOT NULL,
-    match_time  TIME         NOT NULL,
-    status      VARCHAR(15)  NOT NULL DEFAULT 'PROGRAMADO',
-    stadium_id  BIGINT       NOT NULL,
+    public_id   UUID         NOT NULL DEFAULT gen_random_uuid(),
+    first_name  VARCHAR(50)  NOT NULL,
+    middle_name VARCHAR(50),
+    last_name   VARCHAR(50)  NOT NULL,
+    cedula      VARCHAR(10)  NOT NULL,
+    nationality VARCHAR(50)  NOT NULL,
+    address     VARCHAR(200) NOT NULL,
+    phone       VARCHAR(15)  NOT NULL,
+    email       VARCHAR(100) NOT NULL,
+    user_id     BIGINT       NOT NULL,
 
-    CONSTRAINT pk_sport_match         PRIMARY KEY (id),
-    CONSTRAINT fk_sport_match_stadium FOREIGN KEY (stadium_id) REFERENCES stadium (id) ON DELETE RESTRICT,
-    CONSTRAINT ck_sport_match_status  CHECK (status IN ('PROGRAMADO', 'EN_CURSO', 'FINALIZADO', 'CANCELADO'))
+    CONSTRAINT pk_client         PRIMARY KEY (id),
+    CONSTRAINT uk_client_public  UNIQUE (public_id),
+    CONSTRAINT uk_client_cedula  UNIQUE (cedula),
+    CONSTRAINT uk_client_user    UNIQUE (user_id),
+    CONSTRAINT fk_client_user    FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE RESTRICT,
+    CONSTRAINT ck_client_cedula  CHECK (cedula ~ '^[0-9]{10}$'),
+    CONSTRAINT ck_client_phone   CHECK (phone  ~ '^\+?[0-9]{7,14}$'),
+    CONSTRAINT ck_client_email   CHECK (email  ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$')
 );
 
-CREATE INDEX idx_sport_match_stadium ON sport_match (stadium_id);
--- Consulta de partidos con filtro por fecha (requisito del catálogo).
-CREATE INDEX idx_sport_match_date    ON sport_match (match_date);
+CREATE UNIQUE INDEX uk_client_email ON client (LOWER(email));
 
-COMMENT ON COLUMN section.pos_x IS 'HU-38: esquina superior izquierda del recuadro, en % del ancho del plano (0 = borde izquierdo).';
-COMMENT ON COLUMN section.width IS 'HU-38: ancho del recuadro en % del plano. Mínimo 5 para que se pueda tocar en un celular.';
+COMMENT ON TABLE  client IS 'Datos personales del cliente. Solo los usuarios con rol CLIENTE tienen fila aquí.';
+COMMENT ON COLUMN client.public_id IS 'Identificador expuesto en la API. El id interno nunca sale del servicio (evita enumeración / IDOR).';
+COMMENT ON COLUMN client.cedula IS '10 dígitos. La validación del dígito verificador se hace en el servicio.';
+
+-- =====================================================================
+-- audit_log: auditoría (HU-34)
+-- Quién hizo qué, cuándo y desde dónde (tríada AAA).
+-- Registro de solo inserción: nunca se actualiza ni se borra.
+-- =====================================================================
+CREATE TABLE audit_log (
+    id           BIGSERIAL     NOT NULL,
+    occurred_at  TIMESTAMP     NOT NULL,
+    username     VARCHAR(50)   NOT NULL,
+    action       VARCHAR(40)   NOT NULL,
+    entity_type  VARCHAR(30),
+    entity_id    VARCHAR(64),
+    result       VARCHAR(10)   NOT NULL,
+    detail       VARCHAR(250),
+    ip_address   VARCHAR(45),
+
+    CONSTRAINT pk_audit_log        PRIMARY KEY (id),
+    CONSTRAINT ck_audit_log_result CHECK (result IN ('EXITO', 'FALLO'))
+);
+
+CREATE INDEX ix_audit_log_occurred_at ON audit_log (occurred_at);
+CREATE INDEX ix_audit_log_username    ON audit_log (username);
+
+COMMENT ON TABLE  audit_log IS 'Quién hizo qué, cuándo y desde dónde (tríada AAA). Nunca guarda contraseñas ni tokens.';
+COMMENT ON COLUMN audit_log.username IS 'Usuario del token, el usuario que intentó iniciar sesión, o SISTEMA para las tareas programadas.';
+COMMENT ON COLUMN audit_log.ip_address IS '45 caracteres: el largo máximo de una dirección IPv6.';

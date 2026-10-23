@@ -45,6 +45,12 @@ CREATE TABLE section (
     row_count     INT          NOT NULL,
     seats_per_row INT          NOT NULL,
     capacity      INT          NOT NULL,
+    -- Recuadro sobre el plano del estadio (HU-38), en % del plano (0 a 100).
+    -- Los cuatro van juntos: o la sección está ubicada, o no lo está.
+    pos_x         INT,
+    pos_y         INT,
+    width         INT,
+    height        INT,
 
     CONSTRAINT pk_section               PRIMARY KEY (id),
     CONSTRAINT fk_section_stadium       FOREIGN KEY (stadium_id) REFERENCES stadium (id) ON DELETE RESTRICT,
@@ -52,7 +58,11 @@ CREATE TABLE section (
     CONSTRAINT ck_section_type          CHECK (section_type IN ('PALCOS', 'GENERAL', 'PREFERENCIA', 'TRIBUNAS')),
     CONSTRAINT ck_section_row_count     CHECK (row_count > 0),
     CONSTRAINT ck_section_seats_per_row CHECK (seats_per_row > 0),
-    CONSTRAINT ck_section_capacity      CHECK (capacity = row_count * seats_per_row)
+    CONSTRAINT ck_section_capacity      CHECK (capacity = row_count * seats_per_row),
+    CONSTRAINT ck_section_box_complete  CHECK ((pos_x IS NULL AND pos_y IS NULL AND width IS NULL AND height IS NULL)
+                                            OR (pos_x IS NOT NULL AND pos_y IS NOT NULL AND width IS NOT NULL AND height IS NOT NULL)),
+    CONSTRAINT ck_section_box_inside    CHECK (pos_x IS NULL OR (pos_x >= 0 AND pos_y >= 0 AND width >= 5 AND height >= 5
+                                                                AND pos_x + width <= 100 AND pos_y + height <= 100))
 );
 
 CREATE INDEX idx_section_stadium ON section (stadium_id);
@@ -116,3 +126,6 @@ CREATE TABLE sport_match (
 CREATE INDEX idx_sport_match_stadium ON sport_match (stadium_id);
 -- Consulta de partidos con filtro por fecha (requisito del catálogo).
 CREATE INDEX idx_sport_match_date    ON sport_match (match_date);
+
+COMMENT ON COLUMN section.pos_x IS 'HU-38: esquina superior izquierda del recuadro, en % del ancho del plano (0 = borde izquierdo).';
+COMMENT ON COLUMN section.width IS 'HU-38: ancho del recuadro en % del plano. Mínimo 5 para que se pueda tocar en un celular.';

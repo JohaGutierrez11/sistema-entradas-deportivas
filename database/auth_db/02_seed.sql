@@ -1,101 +1,75 @@
 -- =====================================================================
--- match_db · ms-partidos · DATOS SEMILLA
+-- auth_db · ms-usuarios · DATOS SEMILLA
 -- HU-04 · Al menos 5 registros por tabla
 --
 -- Requiere haber ejecutado 01_schema.sql.
--- Se puede ejecutar varias veces: vacía las tablas y reinicia los ids.
+-- Se puede ejecutar varias veces: vacía las tablas y reinicia los ids,
+-- así los ids son siempre los mismos (otros servicios los referencian).
 --
--- Datos de demostración: los estadios conservan una capacidad total
--- referencial, pero solo se modelan 4 localidades pequeñas por estadio
--- (122 asientos) para que el mapa gráfico sea manejable.
+-- Credenciales de DESARROLLO (nunca usar en producción):
+--   admin                     → Admin2026*
+--   todos los clientes        → Cliente2026*
+-- Las contraseñas se guardan como hash BCrypt ($2a$, costo 10).
 -- =====================================================================
 
 SET client_encoding = 'UTF8';
 
-TRUNCATE TABLE sport_match, seat, seat_row, section, stadium RESTART IDENTITY CASCADE;
+TRUNCATE TABLE client, app_user, role RESTART IDENTITY CASCADE;
 
 -- ---------------------------------------------------------------------
--- stadium (capacidades totales aproximadas)
+-- role
+-- El sistema usa ADMIN y CLIENTE. Los otros tres quedan INACTIVOS:
+-- muestran el uso del estado del rol y están reservados para fases futuras.
 -- ---------------------------------------------------------------------
-INSERT INTO stadium (id, name, description, location, total_capacity) VALUES
-  (1, 'Estadio Olímpico Atahualpa',         'Escenario principal de Quito',               'Av. 6 de Diciembre y Naciones Unidas, Quito', 35000),
-  (2, 'Estadio Rodrigo Paz Delgado',        'Conocido como Casa Blanca',                  'Av. Diego de Vásquez, Ponceano, Quito',        41000),
-  (3, 'Estadio Monumental Banco Pichincha', 'El estadio de mayor capacidad del país',     'Av. Barcelona, Guayaquil',                     57000),
-  (4, 'Estadio George Capwell',             'Escenario del barrio Centenario',            'Av. Quito y San Martín, Guayaquil',            40000),
-  (5, 'Estadio Gonzalo Pozo Ripalda',       'Ubicado en el sur de Quito',                 'Chillogallo, Quito',                           18000);
+INSERT INTO role (id, name, description, status) VALUES
+  (1, 'ADMIN',    'Acceso completo: usuarios, catálogo, reservas y reportes', 'ACTIVO'),
+  (2, 'CLIENTE',  'Consulta partidos, reserva entradas y ve sus boletos',     'ACTIVO'),
+  (3, 'SOPORTE',  'Atención al cliente (fase futura)',                        'INACTIVO'),
+  (4, 'TAQUILLA', 'Venta presencial en boletería (fase futura)',              'INACTIVO'),
+  (5, 'AUDITOR',  'Solo lectura de reportes y registros (fase futura)',       'INACTIVO');
 
 -- ---------------------------------------------------------------------
--- section: 4 localidades por estadio, una de cada tipo.
--- capacity = row_count * seats_per_row (lo exige ck_section_capacity).
---   Palco Occidental        PALCOS       2 filas x  5 = 10
---   Preferencia Occidental  PREFERENCIA  3 filas x  8 = 24
---   Tribuna Oriental        TRIBUNAS     4 filas x 10 = 40
---   General Norte           GENERAL      4 filas x 12 = 48   → 122 por estadio
+-- app_user
+-- id 1 = administrador (sin fila en client).
+-- id 2..7 = clientes. Casos preparados para pruebas:
+--   id 6 (rcastillo)  → cuenta INACTIVA: el login debe responder 403.
+--   id 7 (sjaramillo) → recién registrada: must_change_password = TRUE.
+--   id 8 (pbravo)     → BLOQUEADO por 5 intentos fallidos; se libera solo
+--                       15 minutos después de ejecutar este script.
 -- ---------------------------------------------------------------------
--- Recuadros sobre el plano (HU-38), en %: la cancha ocupa x 28-72, y 25-75.
---   Occidente (izquierda): Palco arriba y Preferencia abajo.
---   Oriente (derecha): Tribuna. Norte (arriba): General. El sur queda libre.
-INSERT INTO section (id, stadium_id, name, description, section_type, row_count, seats_per_row, capacity,
-                     pos_x, pos_y, width, height)
-SELECT (s.id - 1) * 4 + t.ord,
-       s.id, t.name, t.description, t.section_type, t.row_count, t.seats_per_row,
-       t.row_count * t.seats_per_row,
-       t.pos_x, t.pos_y, t.width, t.height
-FROM stadium s
-CROSS JOIN (VALUES
-  (1, 'Palco Occidental',       'Palcos privados con vista central', 'PALCOS',      2,  5,  4, 25, 20, 22),
-  (2, 'Preferencia Occidental', 'Graderío con asiento numerado',     'PREFERENCIA', 3,  8,  4, 53, 20, 22),
-  (3, 'Tribuna Oriental',       'Graderío frente a la preferencia',  'TRIBUNAS',    4, 10, 76, 25, 20, 50),
-  (4, 'General Norte',          'Graderío popular detrás del arco',  'GENERAL',     4, 12, 28,  4, 44, 17)
-) AS t(ord, name, description, section_type, row_count, seats_per_row, pos_x, pos_y, width, height)
-ORDER BY s.id, t.ord;
+INSERT INTO app_user (id, username, password_hash, role_id, status, must_change_password, created_at, last_login_at) VALUES
+  (1, 'admin',      '$2a$10$8BovIz1uc8OccW2X2xifkOpbJapt6ZvQHNftl4gQZ8th5EqWfi/2W', 1, 'ACTIVO',   FALSE, '2026-10-01 08:00', '2026-10-17 09:15'),
+  (2, 'mlopez',     '$2a$10$MIo0G.WHio6QgnpiIMUxNuogx2EBncKIw2n6EDtrP0F7G6f0PC0fS', 2, 'ACTIVO',   FALSE, '2026-10-02 10:20', '2026-10-15 19:40'),
+  (3, 'cvera',      '$2a$10$MIo0G.WHio6QgnpiIMUxNuogx2EBncKIw2n6EDtrP0F7G6f0PC0fS', 2, 'ACTIVO',   FALSE, '2026-10-03 14:05', '2026-10-15 20:02'),
+  (4, 'aandrade',   '$2a$10$MIo0G.WHio6QgnpiIMUxNuogx2EBncKIw2n6EDtrP0F7G6f0PC0fS', 2, 'ACTIVO',   FALSE, '2026-10-05 09:30', '2026-10-17 08:55'),
+  (5, 'dmorales',   '$2a$10$MIo0G.WHio6QgnpiIMUxNuogx2EBncKIw2n6EDtrP0F7G6f0PC0fS', 2, 'ACTIVO',   FALSE, '2026-10-06 16:45', '2026-10-16 11:10'),
+  (6, 'rcastillo',  '$2a$10$MIo0G.WHio6QgnpiIMUxNuogx2EBncKIw2n6EDtrP0F7G6f0PC0fS', 2, 'INACTIVO', FALSE, '2026-10-07 11:00', '2026-10-08 12:30'),
+  (7, 'sjaramillo', '$2a$10$MIo0G.WHio6QgnpiIMUxNuogx2EBncKIw2n6EDtrP0F7G6f0PC0fS', 2, 'ACTIVO',   TRUE,  '2026-10-17 07:50', NULL);
+
+INSERT INTO app_user (id, username, password_hash, role_id, status, must_change_password, failed_login_attempts, locked_until, created_at, last_login_at) VALUES
+  (8, 'pbravo',     '$2a$10$MIo0G.WHio6QgnpiIMUxNuogx2EBncKIw2n6EDtrP0F7G6f0PC0fS', 2, 'BLOQUEADO', FALSE, 5, now() + interval '15 minutes', '2026-10-09 15:00', '2026-10-14 21:05');
 
 -- ---------------------------------------------------------------------
--- seat_row: una fila por letra (A, B, C...) según row_count.
--- generate_series(1, n) produce 1..n; chr(64 + n) lo convierte en A..Z.
+-- client  (personas ficticias; cédulas con dígito verificador válido)
 -- ---------------------------------------------------------------------
-INSERT INTO seat_row (section_id, letter)
-SELECT s.id, chr(64 + g)
-FROM section s
-CROSS JOIN LATERAL generate_series(1, s.row_count) AS g
-ORDER BY s.id, g;
+INSERT INTO client (id, first_name, middle_name, last_name, cedula, nationality, address, phone, email, user_id) VALUES
+  (1, 'María',   'Fernanda', 'López',     '1712345675', 'Ecuatoriana', 'Av. 6 de Diciembre N34-120, Quito',        '0991234567', 'maria.lopez@example.com',     2),
+  (2, 'Carlos',  'Andrés',   'Vera',      '1704567898', 'Ecuatoriana', 'Av. Amazonas y Naciones Unidas, Quito',    '0987654321', 'carlos.vera@example.com',     3),
+  (3, 'Andrea',  NULL,       'Andrade',   '0913579249', 'Ecuatoriana', 'Cdla. Kennedy Norte Mz. 5, Guayaquil',     '0998765432', 'andrea.andrade@example.com',  4),
+  (4, 'Diego',   'Sebastián','Morales',   '1724680135', 'Ecuatoriana', 'Calle Rumipamba E2-45, Quito',             '0976543210', 'diego.morales@example.com',   5),
+  (5, 'Rosa',    'Elena',    'Castillo',  '0908642135', 'Ecuatoriana', 'Av. 9 de Octubre 1520, Guayaquil',         '0965432109', 'rosa.castillo@example.com',   6),
+  (6, 'Sofía',   NULL,       'Jaramillo', '1743210989', 'Colombiana',  'Av. República de El Salvador N35-20, Quito','+573001234567','sofia.jaramillo@example.com', 7),
+  (7, 'Pablo',   'Javier',   'Bravo',     '0135791358', 'Ecuatoriana', 'Calle Larga 7-45, Cuenca',                 '0954321098', 'pablo.bravo@example.com',     8);
 
 -- ---------------------------------------------------------------------
--- seat: asientos 1..seats_per_row en cada fila.
--- Con el ORDER BY y los ids reiniciados, la numeración es siempre igual.
--- Estadio 1 (Atahualpa) ocupa los seat.id 1..122:
---   Palco Occidental        A1-A5 = 1-5,    B1-B5 = 6-10
---   Preferencia Occidental  A1-A8 = 11-18,  B = 19-26,  C = 27-34
---   Tribuna Oriental        A1-A10 = 35-44, B = 45-54,  C = 55-64,  D = 65-74
---   General Norte           A1-A12 = 75-86, B = 87-98,  C = 99-110, D = 111-122
--- Cada estadio siguiente suma 122: estadio N empieza en (N-1)*122 + 1.
--- ---------------------------------------------------------------------
-INSERT INTO seat (seat_row_id, seat_number)
-SELECT r.id, n
-FROM seat_row r
-JOIN section s ON s.id = r.section_id
-CROSS JOIN LATERAL generate_series(1, s.seats_per_row) AS n
-ORDER BY r.id, n;
-
--- ---------------------------------------------------------------------
--- sport_match (partidos ficticios entre clubes reales)
--- id 5 ya se jugó (sirve para tickets UTILIZADOS y reportes históricos).
--- id 6 está CANCELADO (no debe permitir nuevas reservas).
--- ---------------------------------------------------------------------
-INSERT INTO sport_match (id, name, description, match_date, match_time, status, stadium_id) VALUES
-  (1, 'El Nacional vs Barcelona SC',              'LigaPro · Fecha 14', '2026-11-07', '15:30', 'PROGRAMADO', 1),
-  (2, 'Liga de Quito vs Independiente del Valle', 'LigaPro · Fecha 14', '2026-11-08', '18:00', 'PROGRAMADO', 2),
-  (3, 'Emelec vs Barcelona SC',                   'Clásico del Astillero', '2026-11-14', '19:00', 'PROGRAMADO', 4),
-  (4, 'Barcelona SC vs Liga de Quito',            'LigaPro · Fecha 16', '2026-11-21', '17:00', 'PROGRAMADO', 3),
-  (5, 'Aucas vs Deportivo Cuenca',                'LigaPro · Fecha 11', '2026-10-10', '15:00', 'FINALIZADO', 5),
-  (6, 'Universidad Católica vs El Nacional',      'LigaPro · Fecha 17', '2026-11-28', '12:00', 'CANCELADO',  1);
-
--- ---------------------------------------------------------------------
--- Reiniciar las secuencias de las tablas con ids explícitos.
+-- Reiniciar las secuencias.
+-- Insertamos ids explícitos, así que la secuencia sigue en 1. Sin esto,
+-- el primer INSERT de la aplicación intentaría usar id = 1 y fallaría
+-- con "duplicate key". Bug clásico de datos semilla.
 -- ---------------------------------------------------------------------
 DO $$
 BEGIN
-    PERFORM setval(pg_get_serial_sequence('stadium',     'id'), (SELECT MAX(id) FROM stadium));
-    PERFORM setval(pg_get_serial_sequence('section',     'id'), (SELECT MAX(id) FROM section));
-    PERFORM setval(pg_get_serial_sequence('sport_match', 'id'), (SELECT MAX(id) FROM sport_match));
+    PERFORM setval(pg_get_serial_sequence('role',     'id'), (SELECT MAX(id) FROM role));
+    PERFORM setval(pg_get_serial_sequence('app_user', 'id'), (SELECT MAX(id) FROM app_user));
+    PERFORM setval(pg_get_serial_sequence('client',   'id'), (SELECT MAX(id) FROM client));
 END $$;
