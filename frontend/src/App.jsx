@@ -7,6 +7,8 @@ import ForbiddenPage from './pages/ForbiddenPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
+import MatchDetailPage from './pages/public/MatchDetailPage';
+import MatchesPage from './pages/public/MatchesPage';
 
 export default function App() {
   return (
@@ -40,6 +42,10 @@ export default function App() {
         </Route>
       </Route>
 
+      <Route path="/" element={<MatchesPage />} />
+      <Route path="/partidos/:matchId" element={<MatchDetailPage />} />
+      <Route path="/acceso-denegado" element={<ForbiddenPage />} />
+      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
