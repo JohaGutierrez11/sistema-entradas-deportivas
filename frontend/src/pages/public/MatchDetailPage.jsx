@@ -115,8 +115,8 @@ export default function MatchDetailPage() {
         <div className="booking-main card">
           <StadiumMap layout={layout} occupied={occupied} selectedSectionId={sectionId} onSelectSection={setSectionId} />
           {section && (
-            <SeatGrid section={section} occupied={occupied} selectedSeats={selectedSeats}
-                      onToggleSeat={toggleSeat} readOnly={!canReserve} />
+            <SeatGrid section={section} field={layout.field} occupied={occupied} selectedSeats={selectedSeats}
+              onToggleSeat={toggleSeat} readOnly={!canReserve} />
           )}
         </div>
 

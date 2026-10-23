@@ -165,18 +165,19 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 }
 
 /* Plano */
-.stadium-map { width: 100%; height: auto; display: block; }
-.map-bg { fill: var(--gray-100); }
-.map-field rect { fill: #3f8f4f; }
-.map-field line, .map-field circle { stroke: rgba(255, 255, 255, 0.7); stroke-width: 0.8; fill: none; }
-.map-field text { fill: rgba(255, 255, 255, 0.85); font-size: 7px; }
+.stadium-map { width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto; }
+.map-bowl { fill: #e8e5dc; stroke: #d3d1c7; stroke-width: 1; }
+.map-track { fill: #c98a6b; }
+.pitch-lines rect, .pitch-lines line, .pitch-lines circle { fill: none; stroke: rgba(255, 255, 255, 0.8); stroke-width: 1; }
+.pitch-spot { fill: rgba(255, 255, 255, 0.85); }
+.pitch-goal { fill: #fff; }
 .map-section { cursor: pointer; outline: none; }
-.map-section rect { stroke: #fff; stroke-width: 1; transition: opacity 0.15s; }
+.map-section rect { stroke: #fff; stroke-width: 1.5; transition: opacity 0.15s; }
 .map-section:hover rect, .map-section:focus-visible rect { opacity: 0.85; }
-.map-section.is-selected rect { stroke: var(--gray-900); stroke-width: 2; }
+.map-section.is-selected rect { stroke: var(--gray-900); stroke-width: 2.5; }
 .map-section text { pointer-events: none; fill: #fff; }
-.map-label { font-size: 7px; font-weight: 600; }
-.map-sub { font-size: 6px; opacity: 0.9; }
+.map-label { font-weight: 600; }
+.map-sub { font-size: 6.5px; opacity: 0.9; }
 .type-palcos rect { fill: var(--blue-900); }
 .type-preferencia rect { fill: var(--blue-600); }
 .type-tribunas rect { fill: #378add; }
@@ -185,14 +186,26 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .map-section.is-full rect { fill: var(--gray-400); }
 .unplaced { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
 
-/* Grilla de asientos */
+/* Grilla de asientos, orientada como en el plano */
 .seat-panel { margin-top: 1.25rem; border-top: 1px solid var(--gray-200); padding-top: 1rem; }
-.seat-scroll { overflow-x: auto; padding-bottom: 0.25rem; }
-.seat-row { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem; }
-.row-label { width: 1.25rem; font-weight: 600; color: var(--gray-600); text-align: center; flex: none; }
+.seat-layout { display: flex; gap: 0.5rem; align-items: center; }
+.seat-layout.side-top { flex-direction: column; }            /* la cancha queda abajo de la grilla */
+.seat-layout.side-bottom { flex-direction: column-reverse; } /* la cancha queda arriba */
+.seat-layout.side-left { flex-direction: row; }              /* la cancha queda a la derecha */
+.seat-layout.side-right { flex-direction: row-reverse; }     /* la cancha queda a la izquierda */
+.seat-scroll { overflow: auto; max-width: 100%; padding: 0.25rem; }
+.seat-grid { display: grid; gap: 0.35rem; }
+.field-strip {
+  background: repeating-linear-gradient(90deg, #3f8f4f 0 12px, #46985a 12px 24px);
+  color: #fff; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  border-radius: 6px; display: grid; place-items: center; flex: none;
+}
+.side-top .field-strip, .side-bottom .field-strip { width: 100%; height: 1.75rem; }
+.side-left .field-strip, .side-right .field-strip { height: 100%; min-height: 10rem; width: 1.75rem; writing-mode: vertical-rl; }
+.row-label { font-weight: 600; color: var(--gray-600); display: grid; place-items: center; }
 .seat {
-  width: 2rem; height: 2rem; flex: none; border-radius: 6px 6px 4px 4px; border: 1px solid transparent;
-  font: inherit; font-size: 0.75rem; cursor: pointer; display: inline-grid; place-items: center;
+  width: 2rem; height: 2rem; border-radius: 6px; border: 1px solid transparent;
+  font: inherit; font-size: 0.75rem; cursor: pointer; display: inline-grid; place-items: center; padding: 0;
 }
 .seat-free { background: #eaf3de; border-color: #97c459; color: #27500a; }
 .seat-free:hover:not(:disabled) { background: #c0dd97; }
