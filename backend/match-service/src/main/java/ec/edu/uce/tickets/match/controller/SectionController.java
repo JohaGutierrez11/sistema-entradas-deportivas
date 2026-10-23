@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.match.controller;
 import ec.edu.uce.tickets.match.dto.SectionBoxRequest;
 import ec.edu.uce.tickets.match.dto.SectionRequest;
 import ec.edu.uce.tickets.match.dto.SectionResponse;
+import ec.edu.uce.tickets.match.dto.StadiumLayoutResponse;
 import ec.edu.uce.tickets.match.service.SectionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -44,5 +45,10 @@ public class SectionController {
     public SectionResponse updateBox(@PathVariable Long sectionId,
                                      @Valid @RequestBody SectionBoxRequest request) {
         return sectionService.updateBox(sectionId, request);
+    }
+
+    @GetMapping("/stadiums/{stadiumId}/layout")
+    public StadiumLayoutResponse layout(@PathVariable Long stadiumId) {
+        return sectionService.getLayout(stadiumId);
     }
 }
