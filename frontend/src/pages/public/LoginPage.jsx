@@ -36,7 +36,6 @@ export default function LoginPage() {
     <main className="auth-page">
       <form className="card auth-card" onSubmit={handleSubmit} noValidate>
         <h1>Iniciar sesión</h1>
-                <h1>Iniciar sesión</h1>
 
         {notice && !error && <p className="alert alert-info">{notice}</p>}
         {error && <p className="alert alert-error" role="alert">{error}</p>}
