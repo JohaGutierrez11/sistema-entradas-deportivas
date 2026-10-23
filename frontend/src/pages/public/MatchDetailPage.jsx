@@ -117,7 +117,7 @@ export default function MatchDetailPage() {
       <div className="match-header">
         <div>
           <h1>{match.name}</h1>
-          <p className="match-when capitalize">
+          <p className="match-when">
             {formatMatchDate(match.matchDate)} · {match.matchTime} · {match.stadium.name}
           </p>
         </div>
