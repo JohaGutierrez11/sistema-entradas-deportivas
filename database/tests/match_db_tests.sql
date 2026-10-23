@@ -39,6 +39,18 @@ SELECT pg_temp.expect_violation('Sección con 0 filas',
 SELECT pg_temp.expect_violation('Dos secciones con el mismo nombre en un estadio',
   $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity)
     VALUES (901, 'Palco Norte', 'PALCOS', 1, 1, 1)$$, 'uk_section_stadium_name');
+SELECT pg_temp.expect_violation('Recuadro incompleto (falta el alto)',
+  $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity, pos_x, pos_y, width)
+    VALUES (901, 'R1', 'GENERAL', 1, 1, 1, 10, 10, 20)$$, 'ck_section_box_complete');
+SELECT pg_temp.expect_violation('Recuadro que se sale del plano (x 90 + ancho 20)',
+  $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity, pos_x, pos_y, width, height)
+    VALUES (901, 'R2', 'GENERAL', 1, 1, 1, 90, 10, 20, 10)$$, 'ck_section_box_inside');
+SELECT pg_temp.expect_violation('Recuadro demasiado pequeño (ancho 4)',
+  $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity, pos_x, pos_y, width, height)
+    VALUES (901, 'R3', 'GENERAL', 1, 1, 1, 10, 10, 4, 10)$$, 'ck_section_box_inside');
+SELECT pg_temp.expect_ok('Recuadro en el borde exacto del plano (x 80 + ancho 20 = 100)',
+  $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity, pos_x, pos_y, width, height)
+    VALUES (901, 'R4', 'GENERAL', 1, 1, 1, 80, 80, 20, 20)$$);
 SELECT pg_temp.expect_violation('Sección en estadio inexistente',
   $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity)
     VALUES (999999, 'X', 'GENERAL', 1, 1, 1)$$, 'fk_section_stadium');
