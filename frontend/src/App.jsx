@@ -5,6 +5,7 @@ import Placeholder from './components/Placeholder';
 import ChangePasswordPage from './pages/client/ChangePasswordPage';
 import MyReservationsPage from './pages/client/MyReservationsPage';
 import ReservationDetailPage from './pages/client/ReservationDetailPage';
+import MatchesAdminPage from './pages/admin/MatchesAdminPage';
 import StadiumSectionsPage from './pages/admin/StadiumSectionsPage';
 import StadiumsAdminPage from './pages/admin/StadiumsAdminPage';
 import ForbiddenPage from './pages/ForbiddenPage';
@@ -43,7 +44,7 @@ export default function App() {
           <Route path="/admin" element={<Placeholder title="Panel del administrador" />} />
           <Route path="/admin/estadios" element={<StadiumsAdminPage />} />
           <Route path="/admin/estadios/:stadiumId" element={<StadiumSectionsPage />} />
-          <Route path="/admin/partidos" element={<Placeholder title="Partidos" />} />
+          <Route path="/admin/partidos" element={<MatchesAdminPage />} />
           <Route path="/admin/usuarios" element={<Placeholder title="Usuarios y roles" />} />
           <Route path="/admin/reportes" element={<Placeholder title="Reportes" />} />
         </Route>

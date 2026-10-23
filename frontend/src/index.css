@@ -317,3 +317,7 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .box-inputs input[type="range"] { flex: 1; padding: 0; accent-color: var(--blue-600); }
 .box-inputs input[type="number"] { width: 5rem; }
 
+.admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.admin-toolbar .segmented { margin-bottom: 0; }
+.toolbar-filter select { min-width: 14rem; }
+.nowrap { white-space: nowrap; }

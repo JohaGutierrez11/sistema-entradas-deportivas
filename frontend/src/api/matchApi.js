@@ -33,4 +33,13 @@ export const matchApi = {
   /** Ubica o mueve la sección en el plano: { x, y, width, height } en % (HU-38). */
   updateSectionBox: (sectionId, box) =>
     request(`/match-api/v1/sections/${sectionId}/box`, { method: 'PUT', body: box }),
+
+  /** Búsqueda del admin: un estado a la vez (el backend usa PROGRAMADO si no se envía). */
+  searchMatchesByStatus: ({ status, stadiumId, name } = {}) =>
+    request('/match-api/v1/matches', { query: { status, stadiumId, name }, auth: false }),
+
+  createMatch: (match) => request('/match-api/v1/matches', { method: 'POST', body: match }),
+
+  /** El PUT lleva TODOS los campos, también el estado: así se programa, inicia, finaliza o cancela. */
+  updateMatch: (matchId, match) => request(`/match-api/v1/matches/${matchId}`, { method: 'PUT', body: match }),
 };
