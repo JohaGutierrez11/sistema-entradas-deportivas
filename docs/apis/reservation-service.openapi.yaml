@@ -198,7 +198,7 @@ paths:
                 value: { matchId: 1, seatIds: [13, 14] }
               otroEstadio:
                 summary: Asiento del estadio 2 en un partido del estadio 1 (404)
-                value: { matchId: 1, seatIds: [200] }
+                value: { matchId: 1, seatIds: [9000] }
               cancelado:
                 summary: Partido 6 está CANCELADO (422)
                 value: { matchId: 6, seatIds: [50] }
@@ -604,14 +604,17 @@ paths:
                     match: { name: El Nacional vs Barcelona SC, matchDate: '2026-11-07', matchTime: '15:30', stadiumName: Estadio Olímpico Atahualpa }
                     reservations: 4
                     occupancy:
-                      capacity: 122
+                      capacity: 8460
                       occupied: 8
-                      percentage: 6.6
+                      percentage: 0.1
                       sections:
-                        - { name: Palco Occidental, sectionType: PALCOS, capacity: 10, occupied: 6, percentage: 60.0 }
-                        - { name: Preferencia Occidental, sectionType: PREFERENCIA, capacity: 24, occupied: 2, percentage: 8.3 }
-                        - { name: Tribuna Oriental, sectionType: TRIBUNAS, capacity: 40, occupied: 0, percentage: 0.0 }
-                        - { name: General Norte, sectionType: GENERAL, capacity: 48, occupied: 0, percentage: 0.0 }
+                        - { name: Palco Occidental, sectionType: PALCOS, capacity: 200, occupied: 6, percentage: 3.0 }
+                        - { name: Preferencia Occidental Norte, sectionType: PREFERENCIA, capacity: 800, occupied: 2, percentage: 0.3 }
+                        - { name: Preferencia Occidental Sur, sectionType: PREFERENCIA, capacity: 800, occupied: 0, percentage: 0.0 }
+                        - { name: Tribuna Oriental Norte, sectionType: TRIBUNAS, capacity: 1250, occupied: 0, percentage: 0.0 }
+                        - { name: Tribuna Oriental Sur, sectionType: TRIBUNAS, capacity: 1250, occupied: 0, percentage: 0.0 }
+                        - { name: General Norte, sectionType: GENERAL, capacity: 2080, occupied: 0, percentage: 0.0 }
+                        - { name: General Sur, sectionType: GENERAL, capacity: 2080, occupied: 0, percentage: 0.0 }
         '400':
           description: Parámetro con formato inválido (fecha, estado o id)
           content:

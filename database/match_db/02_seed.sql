@@ -5,9 +5,12 @@
 -- Requiere haber ejecutado 01_schema.sql.
 -- Se puede ejecutar varias veces: vacía las tablas y reinicia los ids.
 --
--- Datos de demostración: los estadios conservan una capacidad total
--- referencial, pero solo se modelan 4 localidades pequeñas por estadio
--- (122 asientos) para que el mapa gráfico sea manejable.
+-- Datos de demostración con proporciones reales: 7 localidades por estadio
+-- (8 460 asientos), como en un estadio de fútbol ecuatoriano: palcos al
+-- centro de occidente, preferencia a sus lados, tribuna en oriente y
+-- general detrás de los arcos. total_capacity conserva el aforo real; las
+-- localidades modeladas son una parte (el modelo admite hasta 26 filas x
+-- 100 asientos por sección).
 -- =====================================================================
 
 SET client_encoding = 'UTF8';
@@ -25,28 +28,37 @@ INSERT INTO stadium (id, name, description, location, total_capacity) VALUES
   (5, 'Estadio Gonzalo Pozo Ripalda',       'Ubicado en el sur de Quito',                 'Chillogallo, Quito',                           18000);
 
 -- ---------------------------------------------------------------------
--- section: 4 localidades por estadio, una de cada tipo.
+-- section: 7 localidades por estadio (la misma plantilla en los 5).
 -- capacity = row_count * seats_per_row (lo exige ck_section_capacity).
---   Palco Occidental        PALCOS       2 filas x  5 = 10
---   Preferencia Occidental  PREFERENCIA  3 filas x  8 = 24
---   Tribuna Oriental        TRIBUNAS     4 filas x 10 = 40
---   General Norte           GENERAL      4 filas x 12 = 48   → 122 por estadio
--- ---------------------------------------------------------------------
+--   #  Localidad                       Tipo         Filas x asientos   Capacidad
+--   1  Palco Occidental                PALCOS        8 x 25  (A-H)        200
+--   2  Preferencia Occidental Norte    PREFERENCIA  20 x 40  (A-T)        800
+--   3  Preferencia Occidental Sur      PREFERENCIA  20 x 40  (A-T)        800
+--   4  Tribuna Oriental Norte          TRIBUNAS     25 x 50  (A-Y)      1 250
+--   5  Tribuna Oriental Sur            TRIBUNAS     25 x 50  (A-Y)      1 250
+--   6  General Norte                   GENERAL      26 x 80  (A-Z)      2 080
+--   7  General Sur                     GENERAL      26 x 80  (A-Z)      2 080
+--                                                                      -----
+--                                                                      8 460
 -- Recuadros sobre el plano (HU-38), en %: la cancha ocupa x 28-72, y 25-75.
---   Occidente (izquierda): Palco arriba y Preferencia abajo.
---   Oriente (derecha): Tribuna. Norte (arriba): General. El sur queda libre.
+--   Occidente (izquierda): Preferencia Norte, Palco al centro, Preferencia Sur.
+--   Oriente (derecha): Tribuna Norte y Sur. Norte y Sur: General, detrás de los arcos.
+-- ---------------------------------------------------------------------
 INSERT INTO section (id, stadium_id, name, description, section_type, row_count, seats_per_row, capacity,
                      pos_x, pos_y, width, height)
-SELECT (s.id - 1) * 4 + t.ord,
+SELECT (s.id - 1) * 7 + t.ord,
        s.id, t.name, t.description, t.section_type, t.row_count, t.seats_per_row,
        t.row_count * t.seats_per_row,
        t.pos_x, t.pos_y, t.width, t.height
 FROM stadium s
 CROSS JOIN (VALUES
-  (1, 'Palco Occidental',       'Palcos privados con vista central', 'PALCOS',      2,  5,  4, 25, 20, 22),
-  (2, 'Preferencia Occidental', 'Graderío con asiento numerado',     'PREFERENCIA', 3,  8,  4, 53, 20, 22),
-  (3, 'Tribuna Oriental',       'Graderío frente a la preferencia',  'TRIBUNAS',    4, 10, 76, 25, 20, 50),
-  (4, 'General Norte',          'Graderío popular detrás del arco',  'GENERAL',     4, 12, 28,  4, 44, 17)
+  (1, 'Palco Occidental',             'Palcos privados frente a la mitad de la cancha', 'PALCOS',       8, 25,  4, 40, 22, 20),
+  (2, 'Preferencia Occidental Norte', 'Graderío numerado bajo techo, lado norte',       'PREFERENCIA', 20, 40,  4, 18, 22, 20),
+  (3, 'Preferencia Occidental Sur',   'Graderío numerado bajo techo, lado sur',         'PREFERENCIA', 20, 40,  4, 62, 22, 20),
+  (4, 'Tribuna Oriental Norte',       'Graderío frente a la preferencia, lado norte',   'TRIBUNAS',    25, 50, 74, 18, 22, 30),
+  (5, 'Tribuna Oriental Sur',         'Graderío frente a la preferencia, lado sur',     'TRIBUNAS',    25, 50, 74, 52, 22, 30),
+  (6, 'General Norte',                'Graderío popular detrás del arco norte',         'GENERAL',     26, 80, 28,  3, 44, 20),
+  (7, 'General Sur',                  'Graderío popular detrás del arco sur',           'GENERAL',     26, 80, 28, 77, 44, 20)
 ) AS t(ord, name, description, section_type, row_count, seats_per_row, pos_x, pos_y, width, height)
 ORDER BY s.id, t.ord;
 
@@ -63,12 +75,16 @@ ORDER BY s.id, g;
 -- ---------------------------------------------------------------------
 -- seat: asientos 1..seats_per_row en cada fila.
 -- Con el ORDER BY y los ids reiniciados, la numeración es siempre igual.
--- Estadio 1 (Atahualpa) ocupa los seat.id 1..122:
---   Palco Occidental        A1-A5 = 1-5,    B1-B5 = 6-10
---   Preferencia Occidental  A1-A8 = 11-18,  B = 19-26,  C = 27-34
---   Tribuna Oriental        A1-A10 = 35-44, B = 45-54,  C = 55-64,  D = 65-74
---   General Norte           A1-A12 = 75-86, B = 87-98,  C = 99-110, D = 111-122
--- Cada estadio siguiente suma 122: estadio N empieza en (N-1)*122 + 1.
+-- Estadio 1 (Atahualpa) ocupa los seat.id 1..8460, en este orden:
+--   Palco Occidental              1 -  200   (fila A = 1-25, B = 26-50, ... H = 176-200)
+--   Preferencia Occidental Norte  201 - 1000 (fila A = 201-240, B = 241-280, ...)
+--   Preferencia Occidental Sur    1001 - 1800
+--   Tribuna Oriental Norte        1801 - 3050 (fila A = 1801-1850, ...)
+--   Tribuna Oriental Sur          3051 - 4300
+--   General Norte                 4301 - 6380 (fila A = 4301-4380, ...)
+--   General Sur                   6381 - 8460
+-- Cada estadio siguiente suma 8460: estadio N empieza en (N-1)*8460 + 1.
+-- Fórmula: id = inicio_estadio + inicio_sección + (fila - 1) * asientos_por_fila + número - 1.
 -- ---------------------------------------------------------------------
 INSERT INTO seat (seat_row_id, seat_number)
 SELECT r.id, n

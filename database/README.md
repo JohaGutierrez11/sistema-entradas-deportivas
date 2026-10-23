@@ -128,7 +128,7 @@ Las semillas no son datos al azar: cada registro existe para demostrar o probar 
 
 ### Ids estables entre microservicios
 
-Las referencias lógicas de `reservation_db` (`client_id`, `match_id`, `seat_id`) apuntan a ids de las otras bases. Por eso las semillas reinician los ids (`TRUNCATE ... RESTART IDENTITY`) y siempre producen los mismos valores. El mapa de asientos está en el encabezado de `match_db/02_seed.sql`: el estadio N ocupa los `seat.id` desde `(N-1)*122 + 1`.
+Las referencias lógicas de `reservation_db` (`client_id`, `match_id`, `seat_id`) apuntan a ids de las otras bases. Por eso las semillas reinician los ids (`TRUNCATE ... RESTART IDENTITY`) y siempre producen los mismos valores. El mapa de asientos está en el encabezado de `match_db/02_seed.sql`: cada estadio tiene 7 localidades y 8 460 asientos, y el estadio N ocupa los `seat.id` desde `(N-1)*8460 + 1`.
 
 Después de insertar ids explícitos, cada semilla mueve la secuencia al último id (`setval`). Sin eso, el primer registro creado por la aplicación intentaría usar `id = 1` y fallaría con *duplicate key*.
 

@@ -33,6 +33,14 @@ SELECT pg_temp.expect_true('Las filas son letras consecutivas desde A',
 SELECT pg_temp.expect_true('El mapa de ids del README se cumple (Atahualpa, Palco Occidental A1 = seat 1)',
   $$SELECT EXISTS (SELECT 1 FROM seat t JOIN seat_row r ON r.id = t.seat_row_id JOIN section s ON s.id = r.section_id
                    WHERE t.id = 1 AND s.stadium_id = 1 AND s.name = 'Palco Occidental' AND r.letter = 'A' AND t.seat_number = 1)$$);
+SELECT pg_temp.expect_true('La fórmula del mapa se cumple (estadio 4, General Norte A1 = seat 29681)',
+  $$SELECT EXISTS (SELECT 1 FROM seat t JOIN seat_row r ON r.id = t.seat_row_id JOIN section s ON s.id = r.section_id
+                   WHERE t.id = 29681 AND s.stadium_id = 4 AND s.name = 'General Norte' AND r.letter = 'A' AND t.seat_number = 1)$$);
+SELECT pg_temp.expect_true('Los recuadros del plano no pisan la cancha ni se pisan entre sí',
+  $$SELECT NOT EXISTS (SELECT 1 FROM section a JOIN section b ON a.stadium_id = b.stadium_id AND a.id < b.id
+                       WHERE a.pos_x < b.pos_x + b.width AND b.pos_x < a.pos_x + a.width
+                         AND a.pos_y < b.pos_y + b.height AND b.pos_y < a.pos_y + a.height)
+       AND NOT EXISTS (SELECT 1 FROM section WHERE pos_x < 72 AND 28 < pos_x + width AND pos_y < 75 AND 25 < pos_y + height)$$);
 SELECT pg_temp.expect_true('Hay partidos programados, finalizados y cancelados',
   $$SELECT COUNT(DISTINCT status) >= 3 FROM sport_match$$);
 

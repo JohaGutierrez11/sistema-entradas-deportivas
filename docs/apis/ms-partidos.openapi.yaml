@@ -518,7 +518,7 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/SeatValidationRequest' }
-            example: { matchId: 1, seatIds: [35, 36, 999] }
+            example: { matchId: 1, seatIds: [1801, 1802, 99999] }
       responses:
         '200':
           description: Resultado de la validación
