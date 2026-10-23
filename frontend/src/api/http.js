@@ -72,3 +72,12 @@ async function readProblem(response) {
     return null;   // 401/403 de Spring Security llegan sin body
   }
 }
+
+/** Convierte los errores por campo del backend en { campo: mensaje } para mostrarlos en el formulario. */
+export function fieldErrorMap(error) {
+  const map = {};
+  (error?.fieldErrors ?? []).forEach(({ field, message }) => {
+    if (!map[field]) map[field] = message;   // el primero de cada campo
+  });
+  return map;
+}

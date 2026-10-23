@@ -30,6 +30,15 @@ export function AuthProvider({ children }) {
       return newSession;
     }
 
+        /** Tras cambiar la contraseña: ya no se le exige al usuario. */
+    function markPasswordChanged() {
+      setSession((current) => {
+        const updated = { ...current, mustChangePassword: false };
+        saveSession(updated);
+        return updated;
+      });
+    }
+
     function logout() {
       clearSession();
       setSession(null);
@@ -42,6 +51,7 @@ export function AuthProvider({ children }) {
       isClient: session?.role === 'CLIENTE',
       login,
       logout,
+      markPasswordChanged,
     };
   }, [session]);
 
