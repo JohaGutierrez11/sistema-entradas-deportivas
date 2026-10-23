@@ -11,7 +11,8 @@ public record SectionResponse(
         SectionType sectionType,
         Integer rowCount,
         Integer seatsPerRow,
-        Integer capacity
+        Integer capacity,
+        BoxResponse box
 ) {
     public static SectionResponse from(Section section) {
         return new SectionResponse(
@@ -22,7 +23,8 @@ public record SectionResponse(
                 section.getSectionType(),
                 section.getRowCount(),
                 section.getSeatsPerRow(),
-                section.getCapacity()
+                section.getCapacity(),
+                BoxResponse.from(section.getBox())
         );
     }
 }

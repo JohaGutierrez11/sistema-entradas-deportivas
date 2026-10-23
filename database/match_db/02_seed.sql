@@ -32,17 +32,22 @@ INSERT INTO stadium (id, name, description, location, total_capacity) VALUES
 --   Tribuna Oriental        TRIBUNAS     4 filas x 10 = 40
 --   General Norte           GENERAL      4 filas x 12 = 48   → 122 por estadio
 -- ---------------------------------------------------------------------
-INSERT INTO section (id, stadium_id, name, description, section_type, row_count, seats_per_row, capacity)
+-- Recuadros sobre el plano (HU-38), en %: la cancha ocupa x 28-72, y 25-75.
+--   Occidente (izquierda): Palco arriba y Preferencia abajo.
+--   Oriente (derecha): Tribuna. Norte (arriba): General. El sur queda libre.
+INSERT INTO section (id, stadium_id, name, description, section_type, row_count, seats_per_row, capacity,
+                     pos_x, pos_y, width, height)
 SELECT (s.id - 1) * 4 + t.ord,
        s.id, t.name, t.description, t.section_type, t.row_count, t.seats_per_row,
-       t.row_count * t.seats_per_row
+       t.row_count * t.seats_per_row,
+       t.pos_x, t.pos_y, t.width, t.height
 FROM stadium s
 CROSS JOIN (VALUES
-  (1, 'Palco Occidental',       'Palcos privados con vista central', 'PALCOS',      2,  5),
-  (2, 'Preferencia Occidental', 'Graderío con asiento numerado',     'PREFERENCIA', 3,  8),
-  (3, 'Tribuna Oriental',       'Graderío frente a la preferencia',  'TRIBUNAS',    4, 10),
-  (4, 'General Norte',          'Graderío popular detrás del arco',  'GENERAL',     4, 12)
-) AS t(ord, name, description, section_type, row_count, seats_per_row)
+  (1, 'Palco Occidental',       'Palcos privados con vista central', 'PALCOS',      2,  5,  4, 25, 20, 22),
+  (2, 'Preferencia Occidental', 'Graderío con asiento numerado',     'PREFERENCIA', 3,  8,  4, 53, 20, 22),
+  (3, 'Tribuna Oriental',       'Graderío frente a la preferencia',  'TRIBUNAS',    4, 10, 76, 25, 20, 50),
+  (4, 'General Norte',          'Graderío popular detrás del arco',  'GENERAL',     4, 12, 28,  4, 44, 17)
+) AS t(ord, name, description, section_type, row_count, seats_per_row, pos_x, pos_y, width, height)
 ORDER BY s.id, t.ord;
 
 -- ---------------------------------------------------------------------

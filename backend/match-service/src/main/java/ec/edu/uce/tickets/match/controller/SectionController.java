@@ -1,5 +1,6 @@
 package ec.edu.uce.tickets.match.controller;
 
+import ec.edu.uce.tickets.match.dto.SectionBoxRequest;
 import ec.edu.uce.tickets.match.dto.SectionRequest;
 import ec.edu.uce.tickets.match.dto.SectionResponse;
 import ec.edu.uce.tickets.match.service.SectionService;
@@ -37,5 +38,11 @@ public class SectionController {
                 .buildAndExpand(created.id())
                 .toUri();
         return ResponseEntity.created(location).body(created);
+    }
+
+    @PutMapping("/sections/{sectionId}/box")
+    public SectionResponse updateBox(@PathVariable Long sectionId,
+                                     @Valid @RequestBody SectionBoxRequest request) {
+        return sectionService.updateBox(sectionId, request);
     }
 }

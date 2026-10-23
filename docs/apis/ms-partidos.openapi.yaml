@@ -166,6 +166,9 @@ paths:
         Público. Devuelve en una sola respuesta las secciones, sus filas y sus asientos,
         para que el front dibuje el mapa sin hacer llamadas en cadena (evita el problema N+1).
 
+        Incluye el recuadro de la **cancha** (`field`) y el de cada sección (`box`, en % del plano,
+        HU-38) para dibujar el estadio; las secciones sin ubicar llegan con `box: null`.
+
         **No incluye disponibilidad.** La estructura casi nunca cambia y vive en ms-partidos;
         la disponibilidad cambia cada segundo y vive en ms-reservas
         (`GET /reservation-api/v1/matches/{matchId}/availability`). El front descarga la estructura una vez
@@ -181,10 +184,13 @@ paths:
               example:
                 stadiumId: 1
                 stadiumName: Estadio Olímpico Atahualpa
+                field: { x: 28, y: 25, width: 44, height: 50 }
                 sections:
                   - id: 1
                     name: Palco Occidental
                     sectionType: PALCOS
+                    capacity: 10
+                    box: { x: 4, y: 25, width: 20, height: 22 }
                     rows:
                       - { id: 1, letter: A, seats: [ { id: 1, number: 1 }, { id: 2, number: 2 }, { id: 3, number: 3 }, { id: 4, number: 4 }, { id: 5, number: 5 } ] }
                       - { id: 2, letter: B, seats: [ { id: 6, number: 1 }, { id: 7, number: 2 }, { id: 8, number: 3 }, { id: 9, number: 4 }, { id: 10, number: 5 } ] }
@@ -265,6 +271,8 @@ paths:
       tags: [Secciones]
       summary: Editar nombre y descripción de una sección
       description: |
+        > **Pendiente: todavía no implementado** (diseñado en HU-07).
+
         Solo ADMIN. Por seguridad no se pueden cambiar las filas ni los asientos de una
         sección existente: podrían tener entradas vendidas. Para otra distribución,
         se elimina la sección y se crea una nueva.
@@ -293,6 +301,8 @@ paths:
       tags: [Secciones]
       summary: Eliminar sección
       description: |
+        > **Pendiente: todavía no implementado** (diseñado en HU-07).
+
         Solo ADMIN. Elimina la sección con sus filas y asientos. No se permite si el
         estadio tiene partidos programados o en curso (`409`), porque esos asientos
         podrían estar reservados en ms-reservas.
@@ -307,6 +317,58 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /match-api/v1/sections/{sectionId}/box:
+    parameters:
+      - name: sectionId
+        in: path
+        required: true
+        schema: { type: integer, format: int64, minimum: 1, example: 4 }
+    put:
+      tags: [Secciones]
+      summary: Ubicar o mover una sección en el plano
+      description: |
+        Solo ADMIN (HU-38). Guarda el recuadro de la sección sobre el plano del estadio.
+        Al mover, la sección se ignora a sí misma en la validación de superposición.
+      operationId: updateSectionBox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SectionBox' }
+            examples:
+              mover:
+                summary: Mover General Norte un poco hacia arriba
+                value: { x: 28, y: 3, width: 44, height: 18 }
+              borde:
+                summary: Valor límite, termina justo donde empieza la cancha (200)
+                value: { x: 28, y: 8, width: 44, height: 17 }
+              cancha:
+                summary: Encima de la cancha (422)
+                value: { x: 30, y: 30, width: 10, height: 10 }
+              fuera:
+                summary: Se sale del plano (400)
+                value: { x: 90, y: 5, width: 20, height: 10 }
+      responses:
+        '200':
+          description: Sección con su nuevo recuadro
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SectionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Se superpone con la cancha o con otra sección del estadio
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                cancha:
+                  value: { type: about:blank, title: Unprocessable Content, status: 422, detail: 'El recuadro se superpone con la cancha (x 28-72, y 25-75)', instance: /match-api/v1/sections/4/box }
+                seccion:
+                  value: { type: about:blank, title: Unprocessable Content, status: 422, detail: 'El recuadro se superpone con la sección "Palco Occidental"', instance: /match-api/v1/sections/4/box }
 
   # ------------------------------------------------------------------ Partidos
   /match-api/v1/matches:
@@ -594,6 +656,23 @@ components:
           description: Número de filas. Se nombran A, B, C… (máximo 26, de A a Z)
           example: 4
         seatsPerRow: { type: integer, minimum: 1, maximum: 100, example: 12 }
+        box:
+          allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
+          description: Opcional. Recuadro sobre el plano (HU-38); sin él, la sección queda "sin ubicar"
+    SectionBox:
+      type: object
+      description: |
+        Recuadro de la sección sobre el plano del estadio (HU-38), en **% del plano** (0 a 100),
+        para que el mapa escale a cualquier pantalla. `x`/`y` = esquina superior izquierda.
+        Reglas: `x + width ≤ 100` y `y + height ≤ 100` (400, campo `insidePlan`); mínimo 5 de ancho
+        y alto; no puede superponerse con la cancha (x 28, y 25, 44 × 50) ni con otra sección del
+        estadio (422). Tocarse en el borde no es superponerse.
+      required: [x, y, width, height]
+      properties:
+        x: { type: integer, minimum: 0, maximum: 95, example: 28 }
+        y: { type: integer, minimum: 0, maximum: 95, example: 79 }
+        width: { type: integer, minimum: 5, maximum: 100, example: 44 }
+        height: { type: integer, minimum: 5, maximum: 100, example: 17 }
     SectionUpdateRequest:
       type: object
       required: [name]
@@ -611,6 +690,10 @@ components:
         rowCount: { type: integer, example: 2 }
         seatsPerRow: { type: integer, example: 5 }
         capacity: { type: integer, description: rowCount × seatsPerRow, example: 10 }
+        box:
+          allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
+          nullable: true
+          description: '`null` si la sección todavía no está ubicada en el plano'
 
     # --------------------------------------------------------------- Mapa
     StadiumLayout:
@@ -618,6 +701,9 @@ components:
       properties:
         stadiumId: { type: integer, format: int64 }
         stadiumName: { type: string }
+        field:
+          allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
+          description: Recuadro de la cancha (fijo), en % del plano
         sections:
           type: array
           items:
@@ -626,6 +712,11 @@ components:
               id: { type: integer, format: int64 }
               name: { type: string }
               sectionType: { $ref: '#/components/schemas/SectionType' }
+              capacity: { type: integer }
+              box:
+                allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
+                nullable: true
+                description: '`null` si la sección no está ubicada en el plano'
               rows:
                 type: array
                 items:
