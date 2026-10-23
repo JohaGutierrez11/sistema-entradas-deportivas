@@ -2,8 +2,9 @@ import { request } from './http';
 
 /** match-service (8082). Catálogo y layout son públicos: sin token, así nunca dan 401 por un token vencido. */
 export const matchApi = {
-  searchMatches: ({ date, name } = {}) =>
-    request('/match-api/v1/matches', { query: { date, name }, auth: false }),
+  /** Sin status el backend busca PROGRAMADO desde hoy. */
+  searchMatches: ({ date, name, status } = {}) =>
+    request('/match-api/v1/matches', { query: { date, name, status }, auth: false }),
 
   getMatch: (matchId) =>
     request(`/match-api/v1/matches/${matchId}`, { auth: false }),

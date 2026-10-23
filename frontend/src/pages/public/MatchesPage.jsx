@@ -14,8 +14,12 @@ export default function MatchesPage() {
     let current = true;   // si llega una búsqueda más nueva, esta respuesta se ignora (race condition)
     setLoading(true);
     setError(null);
-    matchApi.searchMatches(filters)
-      .then((data) => { if (current) setMatches(data); })
+    // En curso + programados: un partido que ya empezó puede seguir vendiendo unos minutos (HU-40)
+    Promise.all([
+      matchApi.searchMatches({ ...filters, status: 'EN_CURSO' }),
+      matchApi.searchMatches(filters),
+    ])
+      .then(([live, upcoming]) => { if (current) setMatches([...live, ...upcoming]); })
       .catch((err) => { if (current) setError(err.message); })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };

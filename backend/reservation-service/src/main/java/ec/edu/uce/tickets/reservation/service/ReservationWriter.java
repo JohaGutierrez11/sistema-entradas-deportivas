@@ -44,7 +44,7 @@ public class ReservationWriter {
     // ------------------------------------------------------------------ HU-16: reservar
 
     @Transactional
-    public ReservationResponse createPending(Long clientId, Long matchId, Set<Long> seatIds) {
+    public ReservationResponse createPending(Long clientId, Long matchId, Set<Long> seatIds, LocalDateTime salesCloseAt) {
         LocalDateTime now = LocalDateTime.now(ECUADOR);
 
         // 4. Liberar reservas vencidas de este partido (por si la tarea automática aún no pasó)
@@ -72,7 +72,9 @@ public class ReservationWriter {
         reservation.setMatchId(matchId);
         reservation.setStatus(ReservationStatus.PENDIENTE);
         reservation.setCreatedAt(now);
-        reservation.setExpiresAt(now.plusMinutes(parameterService.getInt("HOLD_MINUTES")));
+        // Vence a los HOLD_MINUTES, pero nunca después del cierre de la venta: no se puede confirmar después
+        LocalDateTime holdUntil = now.plusMinutes(parameterService.getInt("HOLD_MINUTES"));
+        reservation.setExpiresAt(holdUntil.isBefore(salesCloseAt) ? holdUntil : salesCloseAt);
 
         for (Long seatId : seatIds) {
             SeatLock lock = new SeatLock();

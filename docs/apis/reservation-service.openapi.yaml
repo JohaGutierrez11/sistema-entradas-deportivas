@@ -30,12 +30,12 @@ info:
     | Solo el rol CLIENTE reserva; el ADMIN no | Decisión #8 Sprint 0 | `403` |
     | Máximo de entradas por cliente y partido (sumando reservas activas) | Parámetro `MAX_TICKETS_PER_MATCH` = 6 | `422` |
     | Un asiento no puede estar en dos reservas activas | Consulta + `UNIQUE(match_id, seat_id)` | `409` |
-    | Solo se reserva en partidos `PROGRAMADO` | match-service | `422` |
+    | Solo se reserva en partidos `PROGRAMADO` o `EN_CURSO`, y hasta el cierre de la venta: inicio + `SALES_CLOSE_OFFSET_MINUTES` (HU-40) | match-service + parámetro = 10 | `422` |
     | Los asientos deben pertenecer al estadio del partido | match-service | `404` |
-    | La reserva queda `PENDIENTE` y retiene los asientos unos minutos | Parámetro `HOLD_MINUTES` = 10 | — |
+    | La reserva queda `PENDIENTE` y retiene los asientos unos minutos, nunca más allá del cierre de la venta | Parámetro `HOLD_MINUTES` = 10 | — |
     | Las reservas vencidas se liberan al reservar (y luego con la tarea automática, HU-17) | | — |
     | Solo el dueño confirma, y solo si está `PENDIENTE` y no venció | HU-18 | `404` / `409` |
-    | Al confirmar, el partido debe seguir `PROGRAMADO` | match-service | `422` |
+    | Al confirmar, la venta debe seguir abierta (mismo criterio que al reservar) | match-service + parámetro | `422` |
     | Un ticket por asiento, con un código QR aleatorio de 64 caracteres | HU-18 | — |
     | "Mis reservas" solo muestra las del cliente del token; el ADMIN no tiene "mis reservas" | HU-20 | `403` |
     | Cancelar: el dueño o un ADMIN; no si está cancelada, expirada, con entradas usadas (`409`) o el partido ya empezó (`422`) | HU-19 | `404` / `409` / `422` |
@@ -175,14 +175,14 @@ paths:
         **Orden de validación**
         1. Rol CLIENTE → si no, `403`.
         2. Body: `matchId` y de 1 a 6 `seatIds` sin repetir → si no, `400`.
-        3. match-service: el partido existe y está `PROGRAMADO`, y los asientos son de su estadio
-           → `404` / `422` / `503`. Esta llamada se hace **fuera** de la transacción.
+        3. match-service: el partido existe, la venta está abierta (`PROGRAMADO` o `EN_CURSO` y antes de
+           inicio + `SALES_CLOSE_OFFSET_MINUTES`) y los asientos son de su estadio → `404` / `422` / `503`. Esta llamada se hace **fuera** de la transacción.
         4. Se liberan las reservas `PENDIENTE` vencidas de ese partido (pasan a `EXPIRADA`).
         5. Máximo por cliente y partido (`MAX_TICKETS_PER_MATCH`) → `422`.
         6. Asientos ocupados → `409`. Si dos clientes piden el mismo asiento a la vez, el
            `UNIQUE` de la base deja pasar solo a uno; el otro recibe `409`.
         7. Se crea la reserva `PENDIENTE` con los asientos `HELD` hasta `expiresAt`
-           (ahora + `HOLD_MINUTES`) → `201` con encabezado `Location`.
+           (ahora + `HOLD_MINUTES`, o el cierre de la venta si llega antes) → `201` con encabezado `Location`.
 
         El código de reserva (`RES-2026-K7P4QX`) es aleatorio, sin caracteres confusos
         (`0/O`, `1/I`), para que no se pueda adivinar y se pueda dictar en boletería.
@@ -772,6 +772,15 @@ components:
           type: string
           description: Estado del partido según match-service
           example: PROGRAMADO
+        salesOpen:
+          type: boolean
+          description: Si hoy se puede reservar y confirmar (estado y hora de cierre, HU-40)
+          example: true
+        salesCloseAt:
+          type: string
+          format: date-time
+          description: Hora de Ecuador en que cierra la venta online (inicio + SALES_CLOSE_OFFSET_MINUTES)
+          example: '2026-11-07T15:40:00'
         occupiedSeats:
           type: array
           items: { $ref: '#/components/schemas/OccupiedSeat' }
