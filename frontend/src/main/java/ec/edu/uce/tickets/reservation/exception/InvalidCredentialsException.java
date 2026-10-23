@@ -1,7 +1,0 @@
-package ec.edu.uce.tickets.auth.exception;
-
-public class InvalidCredentialsException extends RuntimeException {
-    public InvalidCredentialsException() {
-        super("Usuario o contraseña incorrectos");
-    }
-}
