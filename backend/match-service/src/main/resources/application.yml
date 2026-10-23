@@ -30,3 +30,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-cambiar-en-produccion-0123456789abcdef}
   internal-key: ${INTERNAL_API_KEY:dev-internal-key-cambiar-en-produccion}
+  match:
+    # Un partido pasa solo a EN_CURSO a su hora de inicio y a FINALIZADO tras esta duración
+    duration-minutes: 120
+    status-check-ms: 60000

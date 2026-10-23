@@ -105,7 +105,7 @@ Credenciales **solo de desarrollo**. La lista completa y los escenarios preparad
 | Un asiento no se vende dos veces | Consulta previa (mensaje claro) + `UNIQUE(match_id, seat_id)` en la base (concurrencia) → 409 |
 | La reserva retiene los asientos 10 minutos | Parámetro `HOLD_MINUTES` y tarea programada que la pasa a EXPIRADA |
 | La venta online cierra 10 minutos después del inicio | Parámetro `SALES_CLOSE_OFFSET_MINUTES`; se mira la hora, no solo el estado del partido |
-| Máquina de estados del partido | `PROGRAMADO → EN_CURSO → FINALIZADO` y `PROGRAMADO → CANCELADO`; los estados finales no cambian |
+| Máquina de estados del partido | `PROGRAMADO → EN_CURSO → FINALIZADO` y `PROGRAMADO → CANCELADO`; los estados finales no cambian. Cada minuto una tarea inicia los partidos a su hora y los finaliza a las 2 horas (`app.match.duration-minutes`); el admin puede adelantarse |
 | Bloqueo por fuerza bruta | 5 intentos fallidos → BLOQUEADO 15 minutos |
 | Un cliente solo ve sus reservas | El id del cliente sale del token, nunca del body; una reserva ajena responde 404 (anti-IDOR) |
 | Nombres únicos sin importar tildes ni mayúsculas | Índice único sobre `name_key(name)` (`unaccent`) |

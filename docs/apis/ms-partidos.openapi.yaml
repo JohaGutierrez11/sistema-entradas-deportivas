@@ -463,6 +463,9 @@ paths:
         Solo ADMIN. Transiciones de estado permitidas:
         `PROGRAMADO → EN_CURSO → FINALIZADO` y `PROGRAMADO → CANCELADO`.
         Cualquier otra (por ejemplo, reabrir un partido FINALIZADO o CANCELADO) → `422`.
+        **Automático:** cada minuto, match-service pasa a `EN_CURSO` los programados cuya hora de inicio
+        llegó, y a `FINALIZADO` los que llevan `app.match.duration-minutes` (120) en curso. El admin puede
+        adelantarse (iniciar o finalizar antes); `CANCELADO` nunca cambia solo.
         No se eliminan partidos: se cancelan, para conservar el historial de reservas.
       operationId: updateMatch
       requestBody:
