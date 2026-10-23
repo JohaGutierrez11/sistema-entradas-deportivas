@@ -42,7 +42,6 @@ function Pitch({ field }) {
         <rect x={fx + 3} y={fy + 3} width={fw - 6} height={fh - 6} />
         <line x1={fx + 3} y1={fy + fh / 2} x2={fx + fw - 3} y2={fy + fh / 2} />
         <circle cx={cx} cy={fy + fh / 2} r={fw * 0.14} />
-        {/* Área norte y sur */}
         <rect x={cx - box.w / 2} y={fy + 3} width={box.w} height={box.h} />
         <rect x={cx - small.w / 2} y={fy + 3} width={small.w} height={small.h} />
         <rect x={cx - box.w / 2} y={fy + fh - 3 - box.h} width={box.w} height={box.h} />
@@ -51,7 +50,6 @@ function Pitch({ field }) {
       <circle cx={cx} cy={fy + fh / 2} r="1.2" className="pitch-spot" />
       <circle cx={cx} cy={fy + 3 + box.h * 0.7} r="1" className="pitch-spot" />
       <circle cx={cx} cy={fy + fh - 3 - box.h * 0.7} r="1" className="pitch-spot" />
-      {/* Arcos */}
       <rect x={cx - goal / 2} y={fy - 1} width={goal} height="3" className="pitch-goal" />
       <rect x={cx - goal / 2} y={fy + fh - 2} width={goal} height="3" className="pitch-goal" />
     </g>
@@ -68,14 +66,12 @@ export default function StadiumMap({ layout, occupied, selectedSectionId, onSele
     <div className="stadium">
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="stadium-map" role="group" aria-label="Plano del estadio">
         <defs>
-          {/* Franjas de césped */}
           <pattern id="grass" width="24" height="24" patternUnits="userSpaceOnUse">
             <rect width="24" height="12" fill="#3f8f4f" />
             <rect y="12" width="24" height="12" fill="#46985a" />
           </pattern>
         </defs>
 
-        {/* El estadio y la pista atlética alrededor de la cancha */}
         <rect x="2" y="2" width={SIZE - 4} height={SIZE - 4} rx="48" className="map-bowl" />
         <rect x={px(field.x) - 7} y={px(field.y) - 7} width={px(field.width) + 14} height={px(field.height) + 14}
               rx="14" className="map-track" />

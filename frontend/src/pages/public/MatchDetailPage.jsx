@@ -116,7 +116,7 @@ export default function MatchDetailPage() {
           <StadiumMap layout={layout} occupied={occupied} selectedSectionId={sectionId} onSelectSection={setSectionId} />
           {section && (
             <SeatGrid section={section} field={layout.field} occupied={occupied} selectedSeats={selectedSeats}
-              onToggleSeat={toggleSeat} readOnly={!canReserve} />
+                      onToggleSeat={toggleSeat} readOnly={!canReserve} />
           )}
         </div>
 
