@@ -56,8 +56,16 @@ function Pitch({ field }) {
   );
 }
 
-/** Plano del estadio: la cancha y cada sección en su recuadro. Tocar una sección la selecciona. */
-export default function StadiumMap({ layout, occupied, selectedSectionId, onSelectSection }) {
+const NO_OCCUPIED = new Set();
+
+/**
+ * Plano del estadio: la cancha y cada sección en su recuadro. Tocar una sección la selecciona.
+ * - subLabel: texto propio debajo del nombre (el admin ve capacidad, no asientos libres).
+ * - draft: recuadro { x, y, width, height, invalid } que el admin está ubicando, con línea punteada.
+ */
+export default function StadiumMap({ layout, occupied = NO_OCCUPIED, selectedSectionId, onSelectSection = () => {},
+                                     subLabel, draft }) {
+  const describe = (section, free) => (subLabel ? subLabel(section) : free === 0 ? 'Agotado' : `${free} libres`);
   const placed = layout.sections.filter((section) => section.box);
   const unplaced = layout.sections.filter((section) => !section.box);
   const { field } = layout;
@@ -87,11 +95,11 @@ export default function StadiumMap({ layout, occupied, selectedSectionId, onSele
           const lineHeight = label.size * 1.15;
           const firstLineY = centerY - ((label.lines.length - 1) * lineHeight) / 2 - 4;
           const classes = ['map-section', `type-${section.sectionType.toLowerCase()}`,
-            section.id === selectedSectionId ? 'is-selected' : '', free === 0 ? 'is-full' : ''].join(' ');
+            section.id === selectedSectionId ? 'is-selected' : '', !subLabel && free === 0 ? 'is-full' : ''].join(' ');
 
           return (
             <g key={section.id} className={classes} role="button" tabIndex={0}
-               aria-label={`${section.name}: ${free} asientos libres`} aria-pressed={section.id === selectedSectionId}
+               aria-label={`${section.name}: ${describe(section, free)}`} aria-pressed={section.id === selectedSectionId}
                onClick={() => onSelectSection(section.id)}
                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSection(section.id); } }}>
               <rect x={px(box.x)} y={px(box.y)} width={width} height={px(box.height)} rx="6" />
@@ -101,11 +109,16 @@ export default function StadiumMap({ layout, occupied, selectedSectionId, onSele
                 ))}
               </text>
               <text x={centerX} y={firstLineY + label.lines.length * lineHeight + 3} textAnchor="middle" className="map-sub">
-                {free === 0 ? 'Agotado' : `${free} libres`}
+                {describe(section, free)}
               </text>
             </g>
           );
         })}
+
+        {draft && (
+          <rect x={px(draft.x)} y={px(draft.y)} width={px(draft.width)} height={px(draft.height)} rx="6"
+                className={`map-draft ${draft.invalid ? 'is-invalid' : ''}`} />
+        )}
       </svg>
 
       {unplaced.length > 0 && (
@@ -113,7 +126,7 @@ export default function StadiumMap({ layout, occupied, selectedSectionId, onSele
           <span className="muted">Otras secciones:</span>
           {unplaced.map((section) => (
             <button key={section.id} type="button" className="btn btn-small" onClick={() => onSelectSection(section.id)}>
-              {section.name} · {freeSeats(section, occupied)} libres
+              {section.name} · {describe(section, freeSeats(section, occupied))}
             </button>
           ))}
         </div>

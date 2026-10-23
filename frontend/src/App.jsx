@@ -5,6 +5,8 @@ import Placeholder from './components/Placeholder';
 import ChangePasswordPage from './pages/client/ChangePasswordPage';
 import MyReservationsPage from './pages/client/MyReservationsPage';
 import ReservationDetailPage from './pages/client/ReservationDetailPage';
+import StadiumSectionsPage from './pages/admin/StadiumSectionsPage';
+import StadiumsAdminPage from './pages/admin/StadiumsAdminPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import LoginPage from './pages/public/LoginPage';
 import MatchDetailPage from './pages/public/MatchDetailPage';
@@ -39,7 +41,8 @@ export default function App() {
         {/* Solo ADMIN */}
         <Route element={<ProtectedRoute roles={['ADMIN']} />}>
           <Route path="/admin" element={<Placeholder title="Panel del administrador" />} />
-          <Route path="/admin/estadios" element={<Placeholder title="Estadios" />} />
+          <Route path="/admin/estadios" element={<StadiumsAdminPage />} />
+          <Route path="/admin/estadios/:stadiumId" element={<StadiumSectionsPage />} />
           <Route path="/admin/partidos" element={<Placeholder title="Partidos" />} />
           <Route path="/admin/usuarios" element={<Placeholder title="Usuarios y roles" />} />
           <Route path="/admin/reportes" element={<Placeholder title="Reportes" />} />
