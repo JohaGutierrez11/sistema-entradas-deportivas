@@ -10,6 +10,7 @@
 -- Los archivos están en UTF-8 (tildes y ñ en comentarios y datos).
 SET client_encoding = 'UTF8';
 
+DROP TABLE IF EXISTS audit_log CASCADE;
 DROP TABLE IF EXISTS client   CASCADE;
 DROP TABLE IF EXISTS app_user CASCADE;
 DROP TABLE IF EXISTS role     CASCADE;
@@ -101,3 +102,30 @@ CREATE UNIQUE INDEX uk_client_email ON client (LOWER(email));
 COMMENT ON TABLE  client IS 'Datos personales del cliente. Solo los usuarios con rol CLIENTE tienen fila aquí.';
 COMMENT ON COLUMN client.public_id IS 'Identificador expuesto en la API. El id interno nunca sale del servicio (evita enumeración / IDOR).';
 COMMENT ON COLUMN client.cedula IS '10 dígitos. La validación del dígito verificador se hace en el servicio.';
+
+-- =====================================================================
+-- audit_log: auditoría (HU-34)
+-- Quién hizo qué, cuándo y desde dónde (tríada AAA).
+-- Registro de solo inserción: nunca se actualiza ni se borra.
+-- =====================================================================
+CREATE TABLE audit_log (
+    id           BIGSERIAL     NOT NULL,
+    occurred_at  TIMESTAMP     NOT NULL,
+    username     VARCHAR(50)   NOT NULL,
+    action       VARCHAR(40)   NOT NULL,
+    entity_type  VARCHAR(30),
+    entity_id    VARCHAR(64),
+    result       VARCHAR(10)   NOT NULL,
+    detail       VARCHAR(250),
+    ip_address   VARCHAR(45),
+
+    CONSTRAINT pk_audit_log        PRIMARY KEY (id),
+    CONSTRAINT ck_audit_log_result CHECK (result IN ('EXITO', 'FALLO'))
+);
+
+CREATE INDEX ix_audit_log_occurred_at ON audit_log (occurred_at);
+CREATE INDEX ix_audit_log_username    ON audit_log (username);
+
+COMMENT ON TABLE  audit_log IS 'Quién hizo qué, cuándo y desde dónde (tríada AAA). Nunca guarda contraseñas ni tokens.';
+COMMENT ON COLUMN audit_log.username IS 'Usuario del token, el usuario que intentó iniciar sesión, o SISTEMA para las tareas programadas.';
+COMMENT ON COLUMN audit_log.ip_address IS '45 caracteres: el largo máximo de una dirección IPv6.';

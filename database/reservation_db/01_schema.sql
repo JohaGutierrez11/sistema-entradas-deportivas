@@ -17,6 +17,7 @@
 -- Los archivos están en UTF-8 (tildes y ñ en comentarios y datos).
 SET client_encoding = 'UTF8';
 
+DROP TABLE IF EXISTS audit_log   CASCADE;
 DROP TABLE IF EXISTS ticket      CASCADE;
 DROP TABLE IF EXISTS seat_lock   CASCADE;
 DROP TABLE IF EXISTS reservation CASCADE;
@@ -124,3 +125,30 @@ CREATE INDEX idx_ticket_reservation ON ticket (reservation_id);
 
 COMMENT ON COLUMN ticket.public_id IS 'Identificador expuesto en la API (/api/tickets/{public_id}).';
 COMMENT ON COLUMN ticket.qr_code IS 'Token aleatorio de al menos 32 caracteres (UUID o similar). Nunca secuencial.';
+
+-- =====================================================================
+-- audit_log: auditoría (HU-34)
+-- Quién hizo qué, cuándo y desde dónde (tríada AAA).
+-- Registro de solo inserción: nunca se actualiza ni se borra.
+-- =====================================================================
+CREATE TABLE audit_log (
+    id           BIGSERIAL     NOT NULL,
+    occurred_at  TIMESTAMP     NOT NULL,
+    username     VARCHAR(50)   NOT NULL,
+    action       VARCHAR(40)   NOT NULL,
+    entity_type  VARCHAR(30),
+    entity_id    VARCHAR(64),
+    result       VARCHAR(10)   NOT NULL,
+    detail       VARCHAR(250),
+    ip_address   VARCHAR(45),
+
+    CONSTRAINT pk_audit_log        PRIMARY KEY (id),
+    CONSTRAINT ck_audit_log_result CHECK (result IN ('EXITO', 'FALLO'))
+);
+
+CREATE INDEX ix_audit_log_occurred_at ON audit_log (occurred_at);
+CREATE INDEX ix_audit_log_username    ON audit_log (username);
+
+COMMENT ON TABLE  audit_log IS 'Quién hizo qué, cuándo y desde dónde (tríada AAA). Nunca guarda contraseñas ni tokens.';
+COMMENT ON COLUMN audit_log.username IS 'Usuario del token, el usuario que intentó iniciar sesión, o SISTEMA para las tareas programadas.';
+COMMENT ON COLUMN audit_log.ip_address IS '45 caracteres: el largo máximo de una dirección IPv6.';
