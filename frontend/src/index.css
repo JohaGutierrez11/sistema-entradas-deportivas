@@ -326,3 +326,20 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .nowrap { white-space: nowrap; }
 .toolbar-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .admin-toolbar input[type="search"] { min-width: 14rem; }
+
+/* =================================================================== Reportes */
+.section-title { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.kpi { display: flex; flex-direction: column; gap: 0.35rem; }
+.kpi-label { color: var(--gray-600); font-size: 0.85rem; font-weight: 500; }
+.kpi-value { font-size: 2rem; font-weight: 700; color: var(--gray-900); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi-breakdown { list-style: none; padding: 0; margin: 0.25rem 0 0; display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; font-size: 0.85rem; }
+.report-match { margin-bottom: 1rem; }
+.report-match-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.6rem; }
+.report-match-header h3 { margin: 0; font-size: 1rem; }
+.report-match-header p { margin: 0.2rem 0 0; }
+.report-total { display: flex; flex-direction: column; align-items: flex-end; }
+.report-total strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.report-sections { margin-top: 0.75rem; }
+.report-sections td, .report-sections th { padding: 0.45rem 0.5rem; }
+.bar-col { width: 40%; }

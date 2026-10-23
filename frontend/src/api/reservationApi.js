@@ -30,6 +30,12 @@ export const reservationApi = {
   /** El mismo historial en PDF (Blob). */
   getMyReservationsPdf: () => request(`${BASE}/reservations/me/pdf`),
 
+  /** Reporte del ADMIN (HU-21): { from, to, matchId, status }, todos opcionales; los vacíos no se envían. */
+  getAdminReport: (filters) => request(`${BASE}/reports/reservations`, { query: filters }),
+
+  /** El mismo reporte en PDF (Blob), con los mismos filtros. */
+  getAdminReportPdf: (filters) => request(`${BASE}/reports/reservations/pdf`, { query: filters }),
+
   /** PDF con una página por entrada (Blob). */
   getTicketsPdf: (publicId) => request(`${BASE}/reservations/${publicId}/tickets/pdf`),
 };

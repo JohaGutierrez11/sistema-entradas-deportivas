@@ -6,6 +6,7 @@ import ChangePasswordPage from './pages/client/ChangePasswordPage';
 import MyReservationsPage from './pages/client/MyReservationsPage';
 import ReservationDetailPage from './pages/client/ReservationDetailPage';
 import MatchesAdminPage from './pages/admin/MatchesAdminPage';
+import ReportsAdminPage from './pages/admin/ReportsAdminPage';
 import UsersAdminPage from './pages/admin/UsersAdminPage';
 import StadiumSectionsPage from './pages/admin/StadiumSectionsPage';
 import StadiumsAdminPage from './pages/admin/StadiumsAdminPage';
@@ -47,7 +48,7 @@ export default function App() {
           <Route path="/admin/estadios/:stadiumId" element={<StadiumSectionsPage />} />
           <Route path="/admin/partidos" element={<MatchesAdminPage />} />
           <Route path="/admin/usuarios" element={<UsersAdminPage />} />
-          <Route path="/admin/reportes" element={<Placeholder title="Reportes" />} />
+          <Route path="/admin/reportes" element={<ReportsAdminPage />} />
         </Route>
       </Route>
 
