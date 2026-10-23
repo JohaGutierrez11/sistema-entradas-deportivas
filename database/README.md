@@ -11,14 +11,14 @@ database/
 │   └── 02_seed.sql                5 roles, 8 usuarios, 7 clientes
 ├── match_db/
 │   ├── 01_schema.sql              ms-partidos: stadium, section, seat_row, seat, sport_match
-│   └── 02_seed.sql                5 estadios, 20 secciones, 65 filas, 610 asientos, 6 partidos
+│   └── 02_seed.sql                5 estadios, 35 secciones, 750 filas, 42 300 asientos, 6 partidos
 ├── reservation_db/
 │   ├── 01_schema.sql              ms-reservas: parameter, reservation, seat_lock, ticket
-│   └── 02_seed.sql                5 parámetros, 7 reservas, 17 bloqueos, 16 tickets
+│   └── 02_seed.sql                6 parámetros, 7 reservas, 17 bloqueos, 16 tickets
 └── tests/
     ├── 00_test_helpers.sql        expect_ok / expect_violation / expect_true / report
-    ├── *_tests.sql                70 pruebas de restricciones (intentan romper cada regla)
-    └── *_seed_checks.sql          36 verificaciones de que las semillas cumplen las reglas de negocio
+    ├── *_tests.sql                78 pruebas de restricciones (intentan romper cada regla)
+    └── *_seed_checks.sql          38 verificaciones de que las semillas cumplen las reglas de negocio
 ```
 
 El modelo y sus decisiones de diseño están en [`docs/modelo-er`](../docs/modelo-er/README.md).
@@ -32,13 +32,13 @@ cd database
 .\setup-db.ps1
 ```
 
-El script crea el contenedor `pg-entradas` (PostgreSQL 16 en el puerto **5433**), crea las tres bases, las tablas, carga las semillas y corre las 106 pruebas. Se puede ejecutar todas las veces que haga falta: recarga los datos desde cero.
+El script crea el contenedor `pg-entradas` (PostgreSQL 16 en el puerto **5433**), crea las tres bases, las tablas, carga las semillas y corre las 116 pruebas. Se puede ejecutar todas las veces que haga falta: recarga los datos desde cero.
 
 Al final muestra un total general:
 
 ```
 ================================================
- TOTAL: 106 casos · 106 PASS · 0 FAIL
+ TOTAL: 116 casos · 116 PASS · 0 FAIL
 ================================================
 ```
 
@@ -154,8 +154,8 @@ Nombrar las restricciones permite que el error diga exactamente qué regla se vi
 
 | Tipo | Qué verifica | Casos |
 |---|---|---|
-| Restricciones (`*_tests.sql`) | Cada regla rechaza lo que debe rechazar, con la restricción exacta | 70 |
-| Semillas (`*_seed_checks.sql`) | Mínimo 5 registros por tabla y coherencia con las reglas de negocio (capacidades, máximo de entradas, estados de reservas y de cuentas) | 36 |
+| Restricciones (`*_tests.sql`) | Cada regla rechaza lo que debe rechazar, con la restricción exacta | 78 |
+| Semillas (`*_seed_checks.sql`) | Mínimo 5 registros por tabla y coherencia con las reglas de negocio (capacidades, máximo de entradas, estados de reservas y de cuentas) | 38 |
 
 Las pruebas corren dentro de una transacción que termina en `ROLLBACK`: no modifican los datos. Si algún caso falla, `psql` termina con error y `setup-db.ps1` se detiene.
 
