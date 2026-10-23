@@ -55,7 +55,8 @@ public class InternalSeatService {
                 .sorted()
                 .toList();
 
-        return new SeatValidationResponse(match.getId(), match.getStatus(), stadiumId, valid, invalid);
+        return new SeatValidationResponse(match.getId(), match.getStatus(),
+                match.getMatchDate(), match.getMatchTime(), stadiumId, valid, invalid);
     }
 
     @Transactional(readOnly = true)

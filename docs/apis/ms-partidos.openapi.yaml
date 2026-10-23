@@ -518,7 +518,7 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/SeatValidationRequest' }
-            example: { matchId: 1, seatIds: [35, 36, 999] }
+            example: { matchId: 1, seatIds: [1801, 1802, 99999] }
       responses:
         '200':
           description: Resultado de la validación
@@ -789,6 +789,8 @@ components:
       properties:
         matchId: { type: integer, format: int64 }
         matchStatus: { $ref: '#/components/schemas/MatchStatus' }
+        matchDate: { type: string, format: date, example: '2026-11-07' }
+        matchTime: { type: string, example: '15:30', description: 'HH:mm, hora de Ecuador (HU-40: cierre de la venta)' }
         stadiumId: { type: integer, format: int64 }
         validSeatIds:
           type: array

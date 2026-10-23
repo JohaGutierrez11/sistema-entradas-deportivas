@@ -7,7 +7,7 @@ import SeatGrid from '../../components/SeatGrid';
 import StadiumMap from '../../components/StadiumMap';
 import StatusBadge from '../../components/StatusBadge';
 import { usePolling } from '../../hooks/usePolling';
-import { formatMatchDate } from '../../utils/format';
+import { formatDateTime, formatMatchDate } from '../../utils/format';
 import { buildSeatIndex, seatLabel } from '../../utils/seats';
 
 const MAX_SEATS = 6;   // comodidad del front; la regla real (con tus otras reservas) la aplica el backend
@@ -55,7 +55,8 @@ export default function MatchDetailPage() {
   }, [matchId]);
 
   useEffect(() => { loadAvailability(); }, [loadAvailability]);
-  usePolling(loadAvailability, availability?.refreshSeconds ?? 5, match?.status === 'PROGRAMADO');
+  // Se refresca mientras se pueda vender; el backend dice hasta cuándo (salesOpen)
+  usePolling(loadAvailability, availability?.refreshSeconds ?? 5, availability?.salesOpen ?? match?.status === 'PROGRAMADO');
 
   const seatIndex = useMemo(() => buildSeatIndex(layout), [layout]);
   const occupied = useMemo(
@@ -106,7 +107,9 @@ export default function MatchDetailPage() {
   if (!match || !layout) return <p className="muted">Cargando el estadio…</p>;
 
   const section = layout.sections.find((s) => s.id === sectionId);
-  const canReserve = match.status === 'PROGRAMADO' && !isAdmin;
+  // La regla (estado + hora de cierre, HU-40) vive en el backend: aquí solo se lee salesOpen
+  const salesOpen = availability ? availability.salesOpen : match.status === 'PROGRAMADO';
+  const canReserve = salesOpen && !isAdmin;
 
   return (
     <section>
@@ -155,7 +158,15 @@ export default function MatchDetailPage() {
                 : isAuthenticated ? `Reservar ${selectedSeats.length || ''}`.trim() : 'Inicia sesión para reservar'}
             </button>
           ) : (
-            <p className="muted">{isAdmin ? 'El administrador no reserva entradas.' : 'Este partido ya no admite reservas.'}</p>
+            <p className="muted">
+              {isAdmin ? 'El administrador no reserva entradas.'
+                : availability?.salesCloseAt && ['PROGRAMADO', 'EN_CURSO'].includes(match.status)
+                  ? `La venta online cerró el ${formatDateTime(availability.salesCloseAt)}.`
+                  : 'Este partido ya no admite reservas.'}
+            </p>
+          )}
+          {salesOpen && availability?.salesCloseAt && (
+            <p className="muted small">Venta online hasta el {formatDateTime(availability.salesCloseAt)}.</p>
           )}
           <p className="muted small">La disponibilidad se actualiza cada {availability?.refreshSeconds ?? 5} s.</p>
         </aside>

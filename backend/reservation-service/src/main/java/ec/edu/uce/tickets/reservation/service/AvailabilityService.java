@@ -20,12 +20,14 @@ public class AvailabilityService {
     private final MatchServiceClient matchServiceClient;
     private final SeatLockRepository seatLockRepository;
     private final ParameterService parameterService;
+    private final SalesWindow salesWindow;
 
     public AvailabilityService(MatchServiceClient matchServiceClient, SeatLockRepository seatLockRepository,
-                               ParameterService parameterService) {
+                               ParameterService parameterService, SalesWindow salesWindow) {
         this.matchServiceClient = matchServiceClient;
         this.seatLockRepository = seatLockRepository;
         this.parameterService = parameterService;
+        this.salesWindow = salesWindow;
     }
 
     // Sin @Transactional a propósito: no se mantiene una conexión a la base abierta
@@ -40,7 +42,11 @@ public class AvailabilityService {
                 .sorted(Comparator.comparing(AvailabilityResponse.OccupiedSeat::seatId))
                 .toList();
 
-        return new AvailabilityResponse(match.id(), match.status(), occupied,
+        // El front no repite la regla: el backend le dice si la venta está abierta y hasta cuándo
+        return new AvailabilityResponse(match.id(), match.status(),
+                salesWindow.isOpen(match.status(), match.matchDate(), match.matchTime()),
+                salesWindow.closeAt(match.matchDate(), match.matchTime()),
+                occupied,
                 parameterService.getInt("AVAILABILITY_REFRESH_SECONDS"));
     }
 }

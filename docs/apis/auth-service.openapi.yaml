@@ -116,6 +116,11 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
               example: { type: about:blank, title: Conflict, status: 409, detail: Ya existe un cliente registrado con esa cédula, instance: /auth-api/v1/auth/register }
+        '422':
+          description: El rol CLIENTE está inactivo, así que no se aceptan registros
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /auth-api/v1/auth/login:
     post:

@@ -64,7 +64,9 @@ public class AuthService {
         // 2. El rol CLIENTE debe existir y estar activo
         Role clientRole = roleRepository.findByName(CLIENT_ROLE)
                 .filter(role -> role.getStatus() == RoleStatus.ACTIVO)
-                .orElseThrow(() -> new IllegalStateException("El rol CLIENTE no existe o está inactivo"));
+                // 422 y no 500: es un estado del negocio que el admin puede provocar desde la pantalla de roles
+                .orElseThrow(() -> new BusinessRuleException(
+                        "El registro de clientes está deshabilitado en este momento. Intenta más tarde"));
 
         // 3. Generar credenciales
         String username = credentialGenerator.generateUsername(request.firstName(), request.lastName());

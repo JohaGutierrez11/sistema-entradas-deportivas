@@ -11,7 +11,7 @@ export default function MatchCard({ match }) {
         <span className="capitalize">{formatMatchDate(match.matchDate)}</span> · {match.matchTime}
       </p>
       <p className="muted">{match.stadium.name}</p>
-      {match.status === 'PROGRAMADO' && (
+      {(match.status === 'PROGRAMADO' || match.status === 'EN_CURSO') && (
         <Link className="btn btn-solid match-cta" to={`/partidos/${match.id}`}>Ver asientos</Link>
       )}
     </article>

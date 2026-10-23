@@ -30,12 +30,12 @@ info:
     | Solo el rol CLIENTE reserva; el ADMIN no | Decisión #8 Sprint 0 | `403` |
     | Máximo de entradas por cliente y partido (sumando reservas activas) | Parámetro `MAX_TICKETS_PER_MATCH` = 6 | `422` |
     | Un asiento no puede estar en dos reservas activas | Consulta + `UNIQUE(match_id, seat_id)` | `409` |
-    | Solo se reserva en partidos `PROGRAMADO` | match-service | `422` |
+    | Solo se reserva en partidos `PROGRAMADO` o `EN_CURSO`, y hasta el cierre de la venta: inicio + `SALES_CLOSE_OFFSET_MINUTES` (HU-40) | match-service + parámetro = 10 | `422` |
     | Los asientos deben pertenecer al estadio del partido | match-service | `404` |
-    | La reserva queda `PENDIENTE` y retiene los asientos unos minutos | Parámetro `HOLD_MINUTES` = 10 | — |
+    | La reserva queda `PENDIENTE` y retiene los asientos unos minutos, nunca más allá del cierre de la venta | Parámetro `HOLD_MINUTES` = 10 | — |
     | Las reservas vencidas se liberan al reservar (y luego con la tarea automática, HU-17) | | — |
     | Solo el dueño confirma, y solo si está `PENDIENTE` y no venció | HU-18 | `404` / `409` |
-    | Al confirmar, el partido debe seguir `PROGRAMADO` | match-service | `422` |
+    | Al confirmar, la venta debe seguir abierta (mismo criterio que al reservar) | match-service + parámetro | `422` |
     | Un ticket por asiento, con un código QR aleatorio de 64 caracteres | HU-18 | — |
     | "Mis reservas" solo muestra las del cliente del token; el ADMIN no tiene "mis reservas" | HU-20 | `403` |
     | Cancelar: el dueño o un ADMIN; no si está cancelada, expirada, con entradas usadas (`409`) o el partido ya empezó (`422`) | HU-19 | `404` / `409` / `422` |
@@ -175,14 +175,14 @@ paths:
         **Orden de validación**
         1. Rol CLIENTE → si no, `403`.
         2. Body: `matchId` y de 1 a 6 `seatIds` sin repetir → si no, `400`.
-        3. match-service: el partido existe y está `PROGRAMADO`, y los asientos son de su estadio
-           → `404` / `422` / `503`. Esta llamada se hace **fuera** de la transacción.
+        3. match-service: el partido existe, la venta está abierta (`PROGRAMADO` o `EN_CURSO` y antes de
+           inicio + `SALES_CLOSE_OFFSET_MINUTES`) y los asientos son de su estadio → `404` / `422` / `503`. Esta llamada se hace **fuera** de la transacción.
         4. Se liberan las reservas `PENDIENTE` vencidas de ese partido (pasan a `EXPIRADA`).
         5. Máximo por cliente y partido (`MAX_TICKETS_PER_MATCH`) → `422`.
         6. Asientos ocupados → `409`. Si dos clientes piden el mismo asiento a la vez, el
            `UNIQUE` de la base deja pasar solo a uno; el otro recibe `409`.
         7. Se crea la reserva `PENDIENTE` con los asientos `HELD` hasta `expiresAt`
-           (ahora + `HOLD_MINUTES`) → `201` con encabezado `Location`.
+           (ahora + `HOLD_MINUTES`, o el cierre de la venta si llega antes) → `201` con encabezado `Location`.
 
         El código de reserva (`RES-2026-K7P4QX`) es aleatorio, sin caracteres confusos
         (`0/O`, `1/I`), para que no se pueda adivinar y se pueda dictar en boletería.
@@ -198,7 +198,7 @@ paths:
                 value: { matchId: 1, seatIds: [13, 14] }
               otroEstadio:
                 summary: Asiento del estadio 2 en un partido del estadio 1 (404)
-                value: { matchId: 1, seatIds: [200] }
+                value: { matchId: 1, seatIds: [9000] }
               cancelado:
                 summary: Partido 6 está CANCELADO (422)
                 value: { matchId: 6, seatIds: [50] }
@@ -604,14 +604,17 @@ paths:
                     match: { name: El Nacional vs Barcelona SC, matchDate: '2026-11-07', matchTime: '15:30', stadiumName: Estadio Olímpico Atahualpa }
                     reservations: 4
                     occupancy:
-                      capacity: 122
+                      capacity: 8460
                       occupied: 8
-                      percentage: 6.6
+                      percentage: 0.1
                       sections:
-                        - { name: Palco Occidental, sectionType: PALCOS, capacity: 10, occupied: 6, percentage: 60.0 }
-                        - { name: Preferencia Occidental, sectionType: PREFERENCIA, capacity: 24, occupied: 2, percentage: 8.3 }
-                        - { name: Tribuna Oriental, sectionType: TRIBUNAS, capacity: 40, occupied: 0, percentage: 0.0 }
-                        - { name: General Norte, sectionType: GENERAL, capacity: 48, occupied: 0, percentage: 0.0 }
+                        - { name: Palco Occidental, sectionType: PALCOS, capacity: 200, occupied: 6, percentage: 3.0 }
+                        - { name: Preferencia Occidental Norte, sectionType: PREFERENCIA, capacity: 800, occupied: 2, percentage: 0.3 }
+                        - { name: Preferencia Occidental Sur, sectionType: PREFERENCIA, capacity: 800, occupied: 0, percentage: 0.0 }
+                        - { name: Tribuna Oriental Norte, sectionType: TRIBUNAS, capacity: 1250, occupied: 0, percentage: 0.0 }
+                        - { name: Tribuna Oriental Sur, sectionType: TRIBUNAS, capacity: 1250, occupied: 0, percentage: 0.0 }
+                        - { name: General Norte, sectionType: GENERAL, capacity: 2080, occupied: 0, percentage: 0.0 }
+                        - { name: General Sur, sectionType: GENERAL, capacity: 2080, occupied: 0, percentage: 0.0 }
         '400':
           description: Parámetro con formato inválido (fecha, estado o id)
           content:
@@ -667,6 +670,38 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /reservation-api/v1/reports/matches/{matchId}/reservations:
+    get:
+      tags: [Reportes]
+      summary: Reservas de un evento
+      description: |
+        Solo **ADMIN** (HU-28). Todas las reservas de un partido, de la más nueva a la más antigua,
+        con el `clientId` del dueño. Ese id solo se expone aquí: las respuestas del cliente no lo llevan.
+        `status` opcional para ver, por ejemplo, solo las confirmadas.
+      operationId: getMatchReservations
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ReservationStatus' }
+      responses:
+        '200':
+          description: Lista (vacía si el partido no tiene reservas)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    clientId: { type: integer, format: int64, example: 1 }
+                    reservation: { $ref: '#/components/schemas/ReservationResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un ADMIN. Sin cuerpo.
 
   # ------------------------------------------------------------------ Tickets
   /reservation-api/v1/tickets/{publicId}/qr:
@@ -769,6 +804,15 @@ components:
           type: string
           description: Estado del partido según match-service
           example: PROGRAMADO
+        salesOpen:
+          type: boolean
+          description: Si hoy se puede reservar y confirmar (estado y hora de cierre, HU-40)
+          example: true
+        salesCloseAt:
+          type: string
+          format: date-time
+          description: Hora de Ecuador en que cierra la venta online (inicio + SALES_CLOSE_OFFSET_MINUTES)
+          example: '2026-11-07T15:40:00'
         occupiedSeats:
           type: array
           items: { $ref: '#/components/schemas/OccupiedSeat' }
