@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.match.service;
 import ec.edu.uce.tickets.match.dto.SectionBoxRequest;
 import ec.edu.uce.tickets.match.dto.SectionRequest;
 import ec.edu.uce.tickets.match.dto.SectionResponse;
+import ec.edu.uce.tickets.match.dto.StadiumLayoutResponse;
 import ec.edu.uce.tickets.match.entity.*;
 import ec.edu.uce.tickets.match.exception.BusinessRuleException;
 import ec.edu.uce.tickets.match.exception.DuplicateResourceException;
@@ -118,5 +119,14 @@ public class SectionService {
                 throw new BusinessRuleException("El recuadro se superpone con la sección \"" + other.getName() + "\"");
             }
         }
+    }
+
+    /** Estructura completa del estadio para el mapa de asientos (HU-38). */
+    @Transactional(readOnly = true)
+    public StadiumLayoutResponse getLayout(Long stadiumId) {
+        Stadium stadium = stadiumRepository.findById(stadiumId)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe el estadio con el id " + stadiumId));
+        // readOnly: las filas y los asientos son LAZY y se cargan aquí, con la sesión abierta
+        return StadiumLayoutResponse.from(stadium, sectionRepository.findByStadiumIdOrderByIdAsc(stadiumId));
     }
 }
