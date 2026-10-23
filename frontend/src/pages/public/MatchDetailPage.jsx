@@ -25,6 +25,7 @@ export default function MatchDetailPage() {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [reserving, setReserving] = useState(false);
 
   // 1. La estructura, UNA vez: el partido y el plano de su estadio
   useEffect(() => {
@@ -82,12 +83,23 @@ export default function MatchDetailPage() {
     }
   }
 
-  function handleReserve() {
+  async function handleReserve() {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: location.pathname } });   // al volver, sigue aquí
       return;
     }
-    setNotice('La reserva se conecta en la parte 2. 🙂');
+    setNotice(null);
+    setReserving(true);   // el botón se desactiva: un doble clic no crea dos reservas
+    try {
+      const reservation = await reservationApi.createReservation(Number(matchId), selectedSeats);
+      navigate(`/reservas/${reservation.publicId}`);
+    } catch (err) {
+      // 409: alguien ganó el asiento · 422: superas el máximo o el partido cambió · 404: asiento inválido
+      setNotice(err.message);
+      if (err.status === 409) await loadAvailability();   // se pinta enseguida quién lo tomó
+    } finally {
+      setReserving(false);
+    }
   }
 
   if (error) return <p className="alert alert-error" role="alert">{error}</p>;
@@ -137,8 +149,10 @@ export default function MatchDetailPage() {
           <p className="muted">{selectedSeats.length} de {MAX_SEATS} asientos</p>
 
           {canReserve ? (
-            <button type="button" className="btn btn-primary" disabled={selectedSeats.length === 0} onClick={handleReserve}>
-              {isAuthenticated ? `Reservar ${selectedSeats.length || ''}`.trim() : 'Inicia sesión para reservar'}
+            <button type="button" className="btn btn-primary" disabled={selectedSeats.length === 0 || reserving}
+                    onClick={handleReserve}>
+              {reserving ? 'Reservando…'
+                : isAuthenticated ? `Reservar ${selectedSeats.length || ''}`.trim() : 'Inicia sesión para reservar'}
             </button>
           ) : (
             <p className="muted">{isAdmin ? 'El administrador no reserva entradas.' : 'Este partido ya no admite reservas.'}</p>
