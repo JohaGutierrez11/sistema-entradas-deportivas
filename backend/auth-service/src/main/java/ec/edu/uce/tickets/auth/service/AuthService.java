@@ -1,5 +1,8 @@
 package ec.edu.uce.tickets.auth.service;
 
+import ec.edu.uce.tickets.auth.audit.AuditAction;
+import ec.edu.uce.tickets.auth.audit.AuditResult;
+import ec.edu.uce.tickets.auth.audit.AuditService;
 import ec.edu.uce.tickets.auth.dto.*;
 import ec.edu.uce.tickets.auth.entity.*;
 import ec.edu.uce.tickets.auth.exception.*;
@@ -27,13 +30,14 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final CredentialsMailService mailService;
     private final TokenService tokenService;
+    private final AuditService auditService;
     private static final ZoneId ECUADOR = ZoneId.of("America/Guayaquil");
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int LOCK_MINUTES = 15;
 
     public AuthService(AppUserRepository appUserRepository, ClientRepository clientRepository,
                        RoleRepository roleRepository, CredentialGenerator credentialGenerator,
-                       PasswordEncoder passwordEncoder, CredentialsMailService mailService, TokenService tokenService) {
+                       PasswordEncoder passwordEncoder, CredentialsMailService mailService, TokenService tokenService, AuditService auditService) {
         this.appUserRepository = appUserRepository;
         this.clientRepository = clientRepository;
         this.roleRepository = roleRepository;
@@ -41,6 +45,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.mailService = mailService;
         this.tokenService = tokenService;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -99,14 +104,20 @@ public class AuthService {
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public LoginResponse login(LoginRequest request) {
         LocalDateTime now = LocalDateTime.now(ECUADOR);
+        String username = request.username().trim();
 
         // 1. Si el usuario no existe: el MISMO mensaje que si la contraseña es incorrecta
-        AppUser user = appUserRepository.findByUsernameIgnoreCase(request.username().trim())
-                .orElseThrow(InvalidCredentialsException::new);
+        AppUser user = appUserRepository.findByUsernameIgnoreCase(username).orElse(null);
+        if (user == null) {
+            auditService.record(username, AuditAction.LOGIN, "USUARIO", null, AuditResult.FALLO, "Usuario inexistente");
+            throw new InvalidCredentialsException();
+        }
 
         // 2. Bloqueo temporal: si ya pasaron los 15 minutos, se desbloquea solo
         if (user.getStatus() == UserStatus.BLOQUEADO) {
             if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(now)) {
+                auditService.record(user.getUsername(), AuditAction.LOGIN, "USUARIO", user.getId().toString(),
+                        AuditResult.FALLO, "Intento con la cuenta bloqueada");
                 throw new AccountLockedException(user.getLockedUntil());              // 423
             }
             user.setStatus(UserStatus.ACTIVO);
@@ -118,15 +129,21 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
+            auditService.record(user.getUsername(), AuditAction.LOGIN, "USUARIO", user.getId().toString(),
+                    AuditResult.FALLO, "Contraseña incorrecta (intento " + attempts + ")");
             if (attempts >= MAX_FAILED_ATTEMPTS) {
                 user.setStatus(UserStatus.BLOQUEADO);
                 user.setLockedUntil(now.plusMinutes(LOCK_MINUTES));
+                auditService.record(user.getUsername(), AuditAction.CUENTA_BLOQUEADA, "USUARIO", user.getId().toString(),
+                        AuditResult.EXITO, "Bloqueada " + LOCK_MINUTES + " minutos por " + attempts + " intentos fallidos");
             }
             throw new InvalidCredentialsException();                                  // 401
         }
 
         // 4. Contraseña correcta, pero la cuenta o el rol están inactivos
         if (user.getStatus() == UserStatus.INACTIVO || user.getRole().getStatus() == RoleStatus.INACTIVO) {
+            auditService.record(user.getUsername(), AuditAction.LOGIN, "USUARIO", user.getId().toString(),
+                    AuditResult.FALLO, "Cuenta o rol inactivo");
             throw new AccountDisabledException();                                     // 403
         }
 
@@ -137,6 +154,8 @@ public class AuthService {
         Long clientId = clientRepository.findByUserId(user.getId()).map(Client::getId).orElse(null);
         String token = tokenService.generate(user, clientId);
 
+        auditService.record(user.getUsername(), AuditAction.LOGIN, "USUARIO", user.getId().toString(),
+                AuditResult.EXITO, null);
         return new LoginResponse(token, "Bearer", tokenService.expiresInSeconds(),
                 user.getUsername(), user.getRole().getName(), user.isMustChangePassword());
     }
@@ -155,5 +174,6 @@ public class AuthService {
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         user.setMustChangePassword(false);
+        auditService.success(AuditAction.CAMBIO_CONTRASENA, "USUARIO", user.getId().toString(), null);
     }
 }

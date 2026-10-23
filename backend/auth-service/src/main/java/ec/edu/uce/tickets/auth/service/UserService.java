@@ -1,5 +1,7 @@
 package ec.edu.uce.tickets.auth.service;
 
+import ec.edu.uce.tickets.auth.audit.AuditAction;
+import ec.edu.uce.tickets.auth.audit.AuditService;
 import ec.edu.uce.tickets.auth.dto.*;
 import ec.edu.uce.tickets.auth.entity.*;
 import ec.edu.uce.tickets.auth.exception.BusinessRuleException;
@@ -17,10 +19,12 @@ public class UserService {
 
     private final AppUserRepository appUserRepository;
     private final RoleRepository roleRepository;
+    private final AuditService auditService;
 
-    public UserService(AppUserRepository appUserRepository, RoleRepository roleRepository) {
+    public UserService(AppUserRepository appUserRepository, RoleRepository roleRepository, AuditService auditService) {
         this.appUserRepository = appUserRepository;
         this.roleRepository = roleRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -32,6 +36,7 @@ public class UserService {
     public UserResponse updateUserStatus(Long id, UpdateUserStatusRequest request, String adminUsername) {
         AppUser user = appUserRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe el usuario con el id " + id));
+        UserStatus previous = user.getStatus();
 
         // BLOQUEADO es del sistema, no del administrador
         if (request.status() == UserStatus.BLOQUEADO) {
@@ -48,7 +53,10 @@ public class UserService {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(null);
         }
+        auditService.success(AuditAction.CAMBIO_ESTADO_USUARIO, "USUARIO", user.getId().toString(),
+                user.getUsername() + ": " + previous + " → " + user.getStatus());
         return UserResponse.from(user);
+
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +68,7 @@ public class UserService {
     public RoleResponse updateRoleStatus(Long id, UpdateRoleStatusRequest request) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe el rol con el id " + id));
+        RoleStatus previous = role.getStatus();
 
         // Desactivar ADMIN dejaría el sistema sin nadie que lo administre
         if ("ADMIN".equals(role.getName()) && request.status() == RoleStatus.INACTIVO) {
@@ -67,6 +76,10 @@ public class UserService {
         }
 
         role.setStatus(request.status());
+        auditService.success(AuditAction.CAMBIO_ESTADO_ROL, "ROL", role.getId().toString(),
+                role.getName() + ": " + previous + " → " + role.getStatus());
         return RoleResponse.from(role);
     }
+
+
 }
