@@ -1,5 +1,7 @@
 package ec.edu.uce.tickets.reservation.service;
 
+import ec.edu.uce.tickets.reservation.audit.AuditAction;
+import ec.edu.uce.tickets.reservation.audit.AuditService;
 import ec.edu.uce.tickets.reservation.client.MatchInfo;
 import ec.edu.uce.tickets.reservation.client.MatchServiceClient;
 import ec.edu.uce.tickets.reservation.client.SeatValidationResult;
@@ -31,13 +33,15 @@ public class ReservationService {
     private final ReservationWriter reservationWriter;
     private final ReservationRepository reservationRepository;
     private final SeatLockRepository seatLockRepository;
+    private final AuditService auditService;
 
     public ReservationService(MatchServiceClient matchServiceClient, ReservationWriter reservationWriter,
-                              ReservationRepository reservationRepository, SeatLockRepository seatLockRepository) {
+                              ReservationRepository reservationRepository, SeatLockRepository seatLockRepository, AuditService auditService) {
         this.matchServiceClient = matchServiceClient;
         this.reservationWriter = reservationWriter;
         this.reservationRepository = reservationRepository;
         this.seatLockRepository = seatLockRepository;
+        this.auditService = auditService;
     }
 
     // SIN @Transactional: primero se consulta a match-service y después se abre la transacción
@@ -53,8 +57,10 @@ public class ReservationService {
                     + validation.invalidSeatIds());
         }
 
-        // 4 a 7. Reglas locales y creación, dentro de la transacción (en OTRA clase)
-        return reservationWriter.createPending(clientId, request.matchId(), request.seatIds());
+        ReservationResponse created = reservationWriter.createPending(clientId, request.matchId(), request.seatIds());
+        auditService.success(AuditAction.RESERVA_CREADA, "RESERVA", created.code(),
+                "Partido " + created.matchId() + ", asientos " + created.seatIds());
+        return created;
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +87,10 @@ public class ReservationService {
             throw new BusinessRuleException("El partido está " + match.status() + " y ya no admite confirmaciones");
         }
 
-        return reservationWriter.confirm(publicId, clientId);
+        ReservationResponse confirmed = reservationWriter.confirm(publicId, clientId);
+        auditService.success(AuditAction.RESERVA_CONFIRMADA, "RESERVA", confirmed.code(),
+                confirmed.tickets().size() + " tickets emitidos");
+        return confirmed;
     }
 
     /** La reserva si existe y quien pregunta puede verla (dueño o admin). Si no, 404 (anti-IDOR). */
@@ -103,7 +112,10 @@ public class ReservationService {
             }
         }
 
-        return reservationWriter.cancel(publicId, clientId, admin);
+        ReservationResponse cancelled = reservationWriter.cancel(publicId, clientId, admin);
+        auditService.success(AuditAction.RESERVA_CANCELADA, "RESERVA", cancelled.code(),
+                admin ? "Cancelada por un administrador" : "Cancelada por el cliente");
+        return cancelled;
     }
 
     /** Todas las reservas de un cliente, de la más nueva a la más antigua. */

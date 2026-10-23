@@ -1,5 +1,7 @@
 package ec.edu.uce.tickets.reservation.service;
 
+import ec.edu.uce.tickets.reservation.audit.AuditAction;
+import ec.edu.uce.tickets.reservation.audit.AuditService;
 import ec.edu.uce.tickets.reservation.dto.MatchSummary;
 import ec.edu.uce.tickets.reservation.dto.PdfFile;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
@@ -20,11 +22,13 @@ public class TicketPdfService {
     private final ReservationService reservationService;
     private final MatchLookup matchLookup;
     private final TicketsPdf ticketsPdf;
+    private final AuditService auditService;
 
-    public TicketPdfService(ReservationService reservationService, MatchLookup matchLookup, TicketsPdf ticketsPdf) {
+    public TicketPdfService(ReservationService reservationService, MatchLookup matchLookup, TicketsPdf ticketsPdf, AuditService auditService) {
         this.reservationService = reservationService;
         this.matchLookup = matchLookup;
         this.ticketsPdf = ticketsPdf;
+        this.auditService = auditService;
     }
 
     public PdfFile build(UUID publicId, Long clientId, boolean admin) {
@@ -41,6 +45,9 @@ public class TicketPdfService {
         }
 
         MatchSummary match = matchLookup.findOrNull(reservation.matchId());
-        return new PdfFile("entradas-" + reservation.code() + ".pdf", ticketsPdf.build(reservation, match, active));
+        PdfFile file = new PdfFile("entradas-" + reservation.code() + ".pdf", ticketsPdf.build(reservation, match, active));
+        auditService.success(AuditAction.ENTRADAS_DESCARGADAS, "RESERVA", reservation.code(),
+                active.size() + " entradas" + (admin ? " (descargadas por un administrador)" : ""));
+        return file;
     }
 }

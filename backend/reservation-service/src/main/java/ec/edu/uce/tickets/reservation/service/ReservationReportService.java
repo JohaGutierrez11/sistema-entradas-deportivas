@@ -1,5 +1,7 @@
 package ec.edu.uce.tickets.reservation.service;
 
+import ec.edu.uce.tickets.reservation.audit.AuditAction;
+import ec.edu.uce.tickets.reservation.audit.AuditService;
 import ec.edu.uce.tickets.reservation.client.MatchOccupancy;
 import ec.edu.uce.tickets.reservation.dto.AdminReportResponse;
 import ec.edu.uce.tickets.reservation.dto.AdminReportResponse.*;
@@ -17,21 +19,47 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 
-/** Reporte consolidado del administrador (HU-21). SIN transacción: consulta a match-service. */
+/**
+ * Reporte consolidado del administrador (HU-21). SIN transacción: consulta a match-service.
+ * Cada reporte generado queda auditado (HU-34): expone datos de todos los clientes.
+ */
 @Service
 public class ReservationReportService {
 
     private final ReservationService reservationService;
     private final MatchLookup matchLookup;
     private final AdminReportPdf adminReportPdf;
+    private final AuditService auditService;
 
-    public ReservationReportService(ReservationService reservationService, MatchLookup matchLookup, AdminReportPdf adminReportPdf) {
+    public ReservationReportService(ReservationService reservationService, MatchLookup matchLookup,
+                                    AdminReportPdf adminReportPdf, AuditService auditService) {
         this.reservationService = reservationService;
         this.matchLookup = matchLookup;
         this.adminReportPdf = adminReportPdf;
+        this.auditService = auditService;
     }
 
+    // ------------------------------------------------------------------ puertas públicas (con auditoría)
+
+    /** Reporte en JSON. */
     public AdminReportResponse build(LocalDate from, LocalDate to, Long matchId, ReservationStatus status) {
+        AdminReportResponse report = buildReport(from, to, matchId, status);
+        audit(report, "JSON");
+        return report;
+    }
+
+    /** Reporte en PDF: el MISMO reporte del JSON, dibujado. */
+    public PdfFile buildPdf(LocalDate from, LocalDate to, Long matchId, ReservationStatus status, String adminUsername) {
+        AdminReportResponse report = buildReport(from, to, matchId, status);
+        String filename = "reporte-reservas-" + report.generatedAt().toLocalDate() + ".pdf";
+        PdfFile file = new PdfFile(filename, adminReportPdf.build(report, adminUsername));
+        audit(report, "PDF");   // después de generarlo: si falla, no se audita un reporte que nadie recibió
+        return file;
+    }
+
+    // ------------------------------------------------------------------ cálculo (sin auditoría)
+
+    private AdminReportResponse buildReport(LocalDate from, LocalDate to, Long matchId, ReservationStatus status) {
         if (from != null && to != null && from.isAfter(to)) {
             throw new BusinessRuleException("La fecha inicial no puede ser posterior a la fecha final");
         }
@@ -96,9 +124,13 @@ public class ReservationReportService {
         return total == 0 ? 0 : Math.round(part * 1000.0 / total) / 10.0;
     }
 
-    public PdfFile buildPdf(LocalDate from, LocalDate to, Long matchId, ReservationStatus status, String adminUsername) {
-        AdminReportResponse report = build(from, to, matchId, status);   // el MISMO reporte del JSON
-        String filename = "reporte-reservas-" + report.generatedAt().toLocalDate() + ".pdf";
-        return new PdfFile(filename, adminReportPdf.build(report, adminUsername));
+    // ------------------------------------------------------------------ auditoría
+
+    /** Quién pidió el reporte, en qué formato, con qué filtros y cuántas reservas salieron. */
+    private void audit(AdminReportResponse report, String format) {
+        Filters f = report.filters();
+        auditService.success(AuditAction.REPORTE_GENERADO, "REPORTE", null,
+                format + " · desde " + f.from() + " · hasta " + f.to() + " · partido " + f.matchId()
+                        + " · estado " + f.status() + " · " + report.summary().totalReservations() + " reservas");
     }
 }

@@ -1,0 +1,6 @@
+package ec.edu.uce.tickets.reservation.audit;
+
+public enum AuditAction {
+    RESERVA_CREADA, RESERVA_CONFIRMADA, RESERVA_CANCELADA, RESERVA_EXPIRADA,
+    REPORTE_GENERADO, ENTRADAS_DESCARGADAS
+}
