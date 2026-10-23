@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, notice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,7 +36,9 @@ export default function LoginPage() {
     <main className="auth-page">
       <form className="card auth-card" onSubmit={handleSubmit} noValidate>
         <h1>Iniciar sesión</h1>
+                <h1>Iniciar sesión</h1>
 
+        {notice && !error && <p className="alert alert-info">{notice}</p>}
         {error && <p className="alert alert-error" role="alert">{error}</p>}
 
         <label htmlFor="username">Usuario</label>

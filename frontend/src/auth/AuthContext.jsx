@@ -7,10 +7,14 @@ const AuthContext = createContext(null);
 /** Comparte con toda la app quién está conectado. Un solo lugar para iniciar y cerrar sesión. */
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => loadSession());
+  const [notice, setNotice] = useState(null);   // 🆕 aviso para el login (por ejemplo, "tu sesión venció")
 
-  // Si http.js detecta un 401, la sesión se cierra en toda la app
+  // Si http.js detecta un 401, la sesión se cierra en toda la app y se avisa por qué
   useEffect(() => {
-    const onExpired = () => setSession(null);
+    const onExpired = () => {
+      setSession(null);
+      setNotice('Tu sesión venció. Inicia sesión otra vez.');   // 🆕
+    };
     window.addEventListener('session-expired', onExpired);
     return () => window.removeEventListener('session-expired', onExpired);
   }, []);
@@ -27,10 +31,16 @@ export function AuthProvider({ children }) {
       };
       saveSession(newSession);
       setSession(newSession);
+      setNotice(null);   // 🆕 al entrar, el aviso ya no tiene sentido
       return newSession;
     }
 
-        /** Tras cambiar la contraseña: ya no se le exige al usuario. */
+    function logout() {
+      clearSession();
+      setSession(null);
+    }
+
+    /** Tras cambiar la contraseña: ya no se le exige al usuario. */
     function markPasswordChanged() {
       setSession((current) => {
         const updated = { ...current, mustChangePassword: false };
@@ -39,13 +49,9 @@ export function AuthProvider({ children }) {
       });
     }
 
-    function logout() {
-      clearSession();
-      setSession(null);
-    }
-
     return {
       session,
+      notice,   // 🆕
       isAuthenticated: session !== null,
       isAdmin: session?.role === 'ADMIN',
       isClient: session?.role === 'CLIENTE',
@@ -53,7 +59,7 @@ export function AuthProvider({ children }) {
       logout,
       markPasswordChanged,
     };
-  }, [session]);
+  }, [session, notice]);   // 🆕 notice también: si cambia, la app se entera
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
