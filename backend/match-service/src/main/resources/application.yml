@@ -18,13 +18,14 @@ spring:
   mvc:
     problemdetails:
       enabled: true
-  springdoc:
-    swagger-ui:
-      path: /swagger-ui.html
-      operations-sorter: method
+
   web:
     locale: es
     locale-resolver: fixed
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
 app:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-cambiar-en-produccion-0123456789abcdef}
