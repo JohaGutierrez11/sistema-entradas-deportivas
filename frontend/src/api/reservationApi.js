@@ -24,6 +24,12 @@ export const reservationApi = {
   /** Imagen PNG del QR de un ticket (Blob). */
   getTicketQr: (ticketPublicId) => request(`${BASE}/tickets/${ticketPublicId}/qr`),
 
+  /** Historial del cliente del token: [{ reservation, match }] (HU-20). */
+  getMyReservations: () => request(`${BASE}/reservations/me`),
+
+  /** El mismo historial en PDF (Blob). */
+  getMyReservationsPdf: () => request(`${BASE}/reservations/me/pdf`),
+
   /** PDF con una página por entrada (Blob). */
   getTicketsPdf: (publicId) => request(`${BASE}/reservations/${publicId}/tickets/pdf`),
 };

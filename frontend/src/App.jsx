@@ -3,6 +3,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import Layout from './components/Layout';
 import Placeholder from './components/Placeholder';
 import ChangePasswordPage from './pages/client/ChangePasswordPage';
+import MyReservationsPage from './pages/client/MyReservationsPage';
 import ReservationDetailPage from './pages/client/ReservationDetailPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import LoginPage from './pages/public/LoginPage';
@@ -31,7 +32,7 @@ export default function App() {
 
         {/* Solo CLIENTE */}
         <Route element={<ProtectedRoute roles={['CLIENTE']} />}>
-          <Route path="/reservas" element={<Placeholder title="Mis reservas" />} />
+          <Route path="/reservas" element={<MyReservationsPage />} />
           <Route path="/reservas/:publicId" element={<ReservationDetailPage />} />
         </Route>
 
