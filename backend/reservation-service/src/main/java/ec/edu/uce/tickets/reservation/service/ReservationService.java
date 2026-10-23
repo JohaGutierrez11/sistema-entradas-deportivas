@@ -5,6 +5,7 @@ import ec.edu.uce.tickets.reservation.audit.AuditService;
 import ec.edu.uce.tickets.reservation.client.MatchInfo;
 import ec.edu.uce.tickets.reservation.client.MatchServiceClient;
 import ec.edu.uce.tickets.reservation.client.SeatValidationResult;
+import ec.edu.uce.tickets.reservation.dto.AdminReservationItem;
 import ec.edu.uce.tickets.reservation.dto.CreateReservationRequest;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
 import ec.edu.uce.tickets.reservation.entity.Reservation;
@@ -149,6 +150,17 @@ public class ReservationService {
         };
         return reservationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt")).stream()
                 .map(ReservationResponse::from)
+                .toList();
+    }
+
+    /** Reservas de un partido para el admin, con el cliente al que pertenecen (HU-28). */
+    @Transactional(readOnly = true)
+    public List<AdminReservationItem> searchForAdmin(Long matchId, ReservationStatus status) {
+        Specification<Reservation> spec = (root, query, cb) -> status == null
+                ? cb.equal(root.get("matchId"), matchId)
+                : cb.and(cb.equal(root.get("matchId"), matchId), cb.equal(root.get("status"), status));
+        return reservationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt")).stream()
+                .map(r -> new AdminReservationItem(r.getClientId(), ReservationResponse.from(r)))
                 .toList();
     }
 

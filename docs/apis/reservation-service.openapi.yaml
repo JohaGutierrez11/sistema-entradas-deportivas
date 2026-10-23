@@ -671,6 +671,38 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /reservation-api/v1/reports/matches/{matchId}/reservations:
+    get:
+      tags: [Reportes]
+      summary: Reservas de un evento
+      description: |
+        Solo **ADMIN** (HU-28). Todas las reservas de un partido, de la más nueva a la más antigua,
+        con el `clientId` del dueño. Ese id solo se expone aquí: las respuestas del cliente no lo llevan.
+        `status` opcional para ver, por ejemplo, solo las confirmadas.
+      operationId: getMatchReservations
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ReservationStatus' }
+      responses:
+        '200':
+          description: Lista (vacía si el partido no tiene reservas)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    clientId: { type: integer, format: int64, example: 1 }
+                    reservation: { $ref: '#/components/schemas/ReservationResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un ADMIN. Sin cuerpo.
+
   # ------------------------------------------------------------------ Tickets
   /reservation-api/v1/tickets/{publicId}/qr:
     get:

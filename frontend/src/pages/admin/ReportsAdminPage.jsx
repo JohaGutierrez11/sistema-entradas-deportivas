@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { matchApi } from '../../api/matchApi';
 import { reservationApi } from '../../api/reservationApi';
 import StatusBadge from '../../components/StatusBadge';
 import { downloadBlob } from '../../utils/download';
 import { formatDateTime, formatShortDate } from '../../utils/format';
+import { buildSeatIndex, seatLabel } from '../../utils/seats';
 import { MATCH_STATUSES } from '../../utils/matchStatus';
 
 const RESERVATION_STATUSES = ['PENDIENTE', 'CONFIRMADA', 'CANCELADA', 'EXPIRADA'];
@@ -123,6 +124,8 @@ export default function ReportsAdminPage() {
             <div className="card empty-state"><p className="muted">Ninguna reserva coincide con los filtros.</p></div>
           )}
           {report.matches.map((item) => <MatchOccupancy key={item.matchId} item={item} />)}
+
+          {filters.matchId && <MatchReservations matchId={filters.matchId} status={filters.status} />}
         </>
       )}
     </section>
@@ -214,5 +217,112 @@ function MatchOccupancy({ item }) {
         <p className="alert alert-warning">match-service no respondió: la ocupación no está disponible ahora.</p>
       )}
     </article>
+  );
+}
+
+/**
+ * Reservas del evento elegido (HU-28): quién reservó, qué asientos y en qué estado.
+ * El admin puede cancelar una reserva activa (por ejemplo, un pedido del cliente por teléfono).
+ */
+function MatchReservations({ matchId, status }) {
+  const [items, setItems] = useState(null);
+  const [seatIndex, setSeatIndex] = useState(new Map());
+  const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [confirmingId, setConfirmingId] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const load = useCallback(() => {
+    reservationApi.getMatchReservations(matchId, status).then(setItems).catch((err) => setError(err.message));
+  }, [matchId, status]);
+  useEffect(load, [load]);
+
+  // Nombres de los asientos ("Palco Occidental · Fila A · Asiento 3"): del plano del estadio del partido
+  useEffect(() => {
+    matchApi.getMatch(matchId)
+      .then((match) => matchApi.getStadiumLayout(match.stadium.id))
+      .then((layout) => setSeatIndex(buildSeatIndex(layout)))
+      .catch(() => setSeatIndex(new Map()));   // sin match-service se muestran los ids
+  }, [matchId]);
+
+  async function cancel(reservation) {
+    setError(null);
+    setNotice(null);
+    setBusyId(reservation.publicId);
+    try {
+      await reservationApi.cancelReservation(reservation.publicId);
+      setNotice(`Se canceló la reserva ${reservation.code}.`);
+      load();
+    } catch (err) {
+      setError(err.message);   // 409 con entradas usadas · 422 el partido ya empezó
+    } finally {
+      setBusyId(null);
+      setConfirmingId(null);
+    }
+  }
+
+  const seatsOf = (r) => (r.tickets.length > 0 ? r.tickets.map((t) => t.seatId) : r.seatIds);
+  const label = (seatId) => (seatIndex.has(seatId) ? seatLabel(seatIndex.get(seatId)) : `Asiento #${seatId}`);
+
+  return (
+    <>
+      <h2 className="section-title">Reservas del evento</h2>
+      {notice && <p className="alert alert-success" role="status">{notice}</p>}
+      {error && <p className="alert alert-error" role="alert">{error}</p>}
+      {items === null && !error && <p className="muted">Cargando reservas…</p>}
+      {items?.length === 0 && <p className="muted">Este partido no tiene reservas con ese filtro.</p>}
+      {items?.length > 0 && (
+        <div className="card table-card">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Asientos</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span className="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(({ clientId, reservation: r }) => {
+                const seats = seatsOf(r);
+                const active = r.status === 'PENDIENTE' || r.status === 'CONFIRMADA';
+                return (
+                  <tr key={r.publicId}>
+                    <td className="nowrap"><strong>{r.code}</strong></td>
+                    <td>Cliente #{clientId}</td>
+                    <td>
+                      {seats.length === 0 ? <span className="muted">—</span> : (
+                        <ul className="seat-names">{seats.map((id) => <li key={id}>{label(id)}</li>)}</ul>
+                      )}
+                    </td>
+                    <td className="nowrap">{formatDateTime(r.createdAt)}</td>
+                    <td><StatusBadge status={r.status} /></td>
+                    <td>
+                      {active && (confirmingId === r.publicId ? (
+                        <div className="row-actions">
+                          <span className="small">¿Cancelar? Se liberan los asientos.</span>
+                          <button type="button" className="btn btn-small btn-danger" disabled={busyId === r.publicId}
+                                  onClick={() => cancel(r)}>Sí</button>
+                          <button type="button" className="btn btn-small" onClick={() => setConfirmingId(null)}>No</button>
+                        </div>
+                      ) : (
+                        <div className="row-actions">
+                          <button type="button" className="btn btn-small btn-danger-outline"
+                                  onClick={() => { setNotice(null); setError(null); setConfirmingId(r.publicId); }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   );
 }

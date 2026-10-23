@@ -33,6 +33,10 @@ export const reservationApi = {
   /** Reporte del ADMIN (HU-21): { from, to, matchId, status }, todos opcionales; los vacíos no se envían. */
   getAdminReport: (filters) => request(`${BASE}/reports/reservations`, { query: filters }),
 
+  /** Reservas de un partido para el admin: [{ clientId, reservation }] (HU-28). */
+  getMatchReservations: (matchId, status) =>
+    request(`${BASE}/reports/matches/${matchId}/reservations`, { query: { status } }),
+
   /** El mismo reporte en PDF (Blob), con los mismos filtros. */
   getAdminReportPdf: (filters) => request(`${BASE}/reports/reservations/pdf`, { query: filters }),
 
