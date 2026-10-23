@@ -152,3 +152,60 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .badge-cancelado, .badge-cancelada { background: var(--red-50); color: var(--red-600); }
 
 @media (prefers-reduced-motion: reduce) { .match-card { transition: none; } }
+
+/* =================================================================== Detalle del partido y mapa */
+.match-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin: 0.75rem 0 1rem; }
+.small { font-size: 0.8rem; }
+.booking { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1rem; align-items: start; }
+.booking-summary { position: sticky; top: 5rem; }
+.booking-summary h2, .seat-title { font-size: 1.05rem; margin: 0 0 0.75rem; color: var(--gray-900); }
+@media (max-width: 860px) {
+  .booking { grid-template-columns: 1fr; }
+  .booking-summary { position: static; }
+}
+
+/* Plano */
+.stadium-map { width: 100%; height: auto; display: block; }
+.map-bg { fill: var(--gray-100); }
+.map-field rect { fill: #3f8f4f; }
+.map-field line, .map-field circle { stroke: rgba(255, 255, 255, 0.7); stroke-width: 0.8; fill: none; }
+.map-field text { fill: rgba(255, 255, 255, 0.85); font-size: 7px; }
+.map-section { cursor: pointer; outline: none; }
+.map-section rect { stroke: #fff; stroke-width: 1; transition: opacity 0.15s; }
+.map-section:hover rect, .map-section:focus-visible rect { opacity: 0.85; }
+.map-section.is-selected rect { stroke: var(--gray-900); stroke-width: 2; }
+.map-section text { pointer-events: none; fill: #fff; }
+.map-label { font-size: 7px; font-weight: 600; }
+.map-sub { font-size: 6px; opacity: 0.9; }
+.type-palcos rect { fill: var(--blue-900); }
+.type-preferencia rect { fill: var(--blue-600); }
+.type-tribunas rect { fill: #378add; }
+.type-general rect { fill: #85b7eb; }
+.type-general text { fill: var(--blue-900); }
+.map-section.is-full rect { fill: var(--gray-400); }
+.unplaced { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
+
+/* Grilla de asientos */
+.seat-panel { margin-top: 1.25rem; border-top: 1px solid var(--gray-200); padding-top: 1rem; }
+.seat-scroll { overflow-x: auto; padding-bottom: 0.25rem; }
+.seat-row { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem; }
+.row-label { width: 1.25rem; font-weight: 600; color: var(--gray-600); text-align: center; flex: none; }
+.seat {
+  width: 2rem; height: 2rem; flex: none; border-radius: 6px 6px 4px 4px; border: 1px solid transparent;
+  font: inherit; font-size: 0.75rem; cursor: pointer; display: inline-grid; place-items: center;
+}
+.seat-free { background: #eaf3de; border-color: #97c459; color: #27500a; }
+.seat-free:hover:not(:disabled) { background: #c0dd97; }
+.seat-held { background: #faeeda; border-color: #ef9f27; color: #633806; }
+.seat-sold { background: #f7c1c1; border-color: #e24b4a; color: #791f1f; }
+.seat-selected { background: var(--blue-600); border-color: var(--blue-900); color: #fff; }
+.seat:disabled { cursor: not-allowed; opacity: 0.75; }
+.seat-legend { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; padding: 0; margin: 1rem 0 0; font-size: 0.85rem; color: var(--gray-600); }
+.seat-legend li { display: flex; align-items: center; gap: 0.4rem; }
+.seat-legend .seat { width: 1rem; height: 1rem; cursor: default; }
+
+/* Resumen */
+.selected-list { list-style: none; padding: 0; margin: 0 0 0.75rem; }
+.selected-list li { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid var(--gray-100); font-size: 0.9rem; }
+.link-button { background: none; border: none; color: var(--gray-600); cursor: pointer; font: inherit; }
+.link-button:hover { color: var(--red-600); }
