@@ -45,8 +45,8 @@ public class SectionService {
                 .orElseThrow(()->new ResourceNotFoundException("No existe el estadio con el id " + stadiumId));
 
         //2. El nombre no puede repetirse dentro del mismo estadio
-        String name = request.name().trim();
-        if (sectionRepository.existsByStadiumIdAndNameIgnoreCase(stadiumId, name)){
+        String name = NameNormalizer.clean(request.name());
+        if (sectionRepository.existsByStadiumIdAndNameKey(stadiumId, name)){
             throw new DuplicateResourceException("Ya existe una sección con el nombre \"" + name + "\" en este estadio");
         }
 

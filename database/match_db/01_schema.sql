@@ -17,6 +17,21 @@ DROP TABLE IF EXISTS section     CASCADE;
 DROP TABLE IF EXISTS stadium     CASCADE;
 
 -- ---------------------------------------------------------------------
+-- name_key: forma "comparable" de un nombre, para que la unicidad no
+-- dependa de tildes, mayúsculas ni espacios de más:
+--   'Estadio Olímpico'  =  'estadio  olimpico '  →  'estadio olimpico'
+-- unaccent viene en el contrib de PostgreSQL. Por sí sola es STABLE (depende
+-- del diccionario configurado); al fijarle el diccionario explícito el
+-- resultado ya no cambia y se puede declarar IMMUTABLE, que es lo que un
+-- índice exige.
+-- ---------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
+CREATE OR REPLACE FUNCTION name_key(p_name TEXT) RETURNS TEXT
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT AS
+$$ SELECT lower(public.unaccent('public.unaccent'::regdictionary, regexp_replace(btrim(p_name), '\s+', ' ', 'g'))) $$;
+
+-- ---------------------------------------------------------------------
 -- stadium: escenario deportivo
 -- ---------------------------------------------------------------------
 CREATE TABLE stadium (
@@ -27,9 +42,13 @@ CREATE TABLE stadium (
     total_capacity INT          NOT NULL,
 
     CONSTRAINT pk_stadium          PRIMARY KEY (id),
-    CONSTRAINT uk_stadium_name     UNIQUE (name),
     CONSTRAINT ck_stadium_capacity CHECK (total_capacity > 0)
 );
+
+-- Unicidad sin tildes, mayúsculas ni espacios de más (un UNIQUE (name) dejaba pasar
+-- 'Estadio Olimpico' junto a 'Estadio Olímpico'). Es un índice, no un CONSTRAINT,
+-- porque PostgreSQL solo admite expresiones en índices únicos.
+CREATE UNIQUE INDEX uk_stadium_name ON stadium (name_key(name));
 
 -- ---------------------------------------------------------------------
 -- section: localidad del estadio
@@ -54,7 +73,6 @@ CREATE TABLE section (
 
     CONSTRAINT pk_section               PRIMARY KEY (id),
     CONSTRAINT fk_section_stadium       FOREIGN KEY (stadium_id) REFERENCES stadium (id) ON DELETE RESTRICT,
-    CONSTRAINT uk_section_stadium_name  UNIQUE (stadium_id, name),
     CONSTRAINT ck_section_type          CHECK (section_type IN ('PALCOS', 'GENERAL', 'PREFERENCIA', 'TRIBUNAS')),
     CONSTRAINT ck_section_row_count     CHECK (row_count > 0),
     CONSTRAINT ck_section_seats_per_row CHECK (seats_per_row > 0),
@@ -65,6 +83,8 @@ CREATE TABLE section (
                                                                 AND pos_x + width <= 100 AND pos_y + height <= 100))
 );
 
+-- Mismo criterio que uk_stadium_name, dentro de cada estadio
+CREATE UNIQUE INDEX uk_section_stadium_name ON section (stadium_id, name_key(name));
 CREATE INDEX idx_section_stadium ON section (stadium_id);
 
 COMMENT ON COLUMN section.capacity IS 'Siempre igual a row_count * seats_per_row (ck_section_capacity).';

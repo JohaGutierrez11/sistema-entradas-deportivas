@@ -23,6 +23,12 @@ SELECT pg_temp.expect_ok('Crear partido válido',
 -- stadium
 SELECT pg_temp.expect_violation('Estadio con nombre repetido',
   $$INSERT INTO stadium (name, location, total_capacity) VALUES ('T_Estadio', 'Guayaquil', 500)$$, 'uk_stadium_name');
+SELECT pg_temp.expect_violation('Estadio repetido con tilde y mayúsculas distintas',
+  $$INSERT INTO stadium (name, location, total_capacity) VALUES ('T_ÉSTADIO', 'Guayaquil', 500)$$, 'uk_stadium_name');
+SELECT pg_temp.expect_violation('Estadio repetido con espacios de más',
+  $$INSERT INTO stadium (name, location, total_capacity) VALUES ('  t_estadio  ', 'Guayaquil', 500)$$, 'uk_stadium_name');
+SELECT pg_temp.expect_true('name_key quita tildes, mayúsculas y espacios de más',
+  $$SELECT name_key('  Estadio   Olímpico  Atahualpa ') = 'estadio olimpico atahualpa'$$);
 SELECT pg_temp.expect_violation('Estadio con capacidad 0',
   $$INSERT INTO stadium (name, location, total_capacity) VALUES ('T_Otro', 'Quito', 0)$$, 'ck_stadium_capacity');
 
@@ -39,6 +45,9 @@ SELECT pg_temp.expect_violation('Sección con 0 filas',
 SELECT pg_temp.expect_violation('Dos secciones con el mismo nombre en un estadio',
   $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity)
     VALUES (901, 'Palco Norte', 'PALCOS', 1, 1, 1)$$, 'uk_section_stadium_name');
+SELECT pg_temp.expect_violation('Sección repetida con tilde en el mismo estadio',
+  $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity)
+    VALUES (901, 'palco nórte', 'PALCOS', 1, 1, 1)$$, 'uk_section_stadium_name');
 SELECT pg_temp.expect_violation('Recuadro incompleto (falta el alto)',
   $$INSERT INTO section (stadium_id, name, section_type, row_count, seats_per_row, capacity, pos_x, pos_y, width)
     VALUES (901, 'R1', 'GENERAL', 1, 1, 1, 10, 10, 20)$$, 'ck_section_box_complete');

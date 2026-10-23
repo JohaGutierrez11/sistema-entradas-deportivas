@@ -42,8 +42,8 @@ public class StadiumService {
     @Transactional
     public StadiumResponse create(StadiumRequest request) {
 
-        String name = request.name().trim();
-        if (stadiumRepository.existsByNameIgnoreCase(name)){
+        String name = NameNormalizer.clean(request.name());
+        if (stadiumRepository.existsByNameKey(name)){
             throw new DuplicateResourceException("Ya existe un estadio con el nombre \"" + name + "\"");
         }
 
@@ -62,8 +62,8 @@ public class StadiumService {
 
         Stadium stadium = findStadiumOrThrow(id);
 
-        String name = request.name().trim();
-        if (stadiumRepository.existsByNameIgnoreCaseAndIdNot(name, id)){
+        String name = NameNormalizer.clean(request.name());
+        if (stadiumRepository.existsByNameKeyAndIdNot(name, id)){
             throw new DuplicateResourceException("Ya existe otro estadio con el nombre \"" + name + "\"");
         }
 
