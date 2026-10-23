@@ -152,6 +152,9 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .badge-en_curso, .badge-pendiente { background: #faeeda; color: #633806; }
 .badge-finalizado, .badge-expirada { background: var(--gray-100); color: var(--gray-600); }
 .badge-cancelado, .badge-cancelada { background: var(--red-50); color: var(--red-600); }
+.badge-activo { background: var(--green-50); color: var(--green-800); }
+.badge-inactivo { background: var(--gray-100); color: var(--gray-600); }
+.badge-bloqueado { background: var(--red-50); color: var(--red-600); }
 
 @media (prefers-reduced-motion: reduce) { .match-card { transition: none; } }
 
@@ -321,3 +324,5 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .admin-toolbar .segmented { margin-bottom: 0; }
 .toolbar-filter select { min-width: 14rem; }
 .nowrap { white-space: nowrap; }
+.toolbar-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.admin-toolbar input[type="search"] { min-width: 14rem; }
