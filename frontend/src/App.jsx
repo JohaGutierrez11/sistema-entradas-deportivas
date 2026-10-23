@@ -4,8 +4,9 @@ import Layout from './components/Layout';
 import Placeholder from './components/Placeholder';
 import ChangePasswordPage from './pages/client/ChangePasswordPage';
 import ForbiddenPage from './pages/ForbiddenPage';
-import HomePage from './pages/HomePage';
 import LoginPage from './pages/public/LoginPage';
+import MatchDetailPage from './pages/public/MatchDetailPage';
+import MatchesPage from './pages/public/MatchesPage';
 import RegisterPage from './pages/public/RegisterPage';
 
 export default function App() {
@@ -17,7 +18,9 @@ export default function App() {
 
       {/* Con menú */}
       <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
+        {/* Públicas */}
+        <Route path="/" element={<MatchesPage />} />
+        <Route path="/partidos/:matchId" element={<MatchDetailPage />} />
         <Route path="/acceso-denegado" element={<ForbiddenPage />} />
 
         {/* Cualquier usuario con sesión */}
