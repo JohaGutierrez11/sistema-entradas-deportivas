@@ -166,6 +166,9 @@ paths:
         Público. Devuelve en una sola respuesta las secciones, sus filas y sus asientos,
         para que el front dibuje el mapa sin hacer llamadas en cadena (evita el problema N+1).
 
+        Incluye el recuadro de la **cancha** (`field`) y el de cada sección (`box`, en % del plano,
+        HU-38) para dibujar el estadio; las secciones sin ubicar llegan con `box: null`.
+
         **No incluye disponibilidad.** La estructura casi nunca cambia y vive en ms-partidos;
         la disponibilidad cambia cada segundo y vive en ms-reservas
         (`GET /reservation-api/v1/matches/{matchId}/availability`). El front descarga la estructura una vez
@@ -181,10 +184,13 @@ paths:
               example:
                 stadiumId: 1
                 stadiumName: Estadio Olímpico Atahualpa
+                field: { x: 28, y: 25, width: 44, height: 50 }
                 sections:
                   - id: 1
                     name: Palco Occidental
                     sectionType: PALCOS
+                    capacity: 10
+                    box: { x: 4, y: 25, width: 20, height: 22 }
                     rows:
                       - { id: 1, letter: A, seats: [ { id: 1, number: 1 }, { id: 2, number: 2 }, { id: 3, number: 3 }, { id: 4, number: 4 }, { id: 5, number: 5 } ] }
                       - { id: 2, letter: B, seats: [ { id: 6, number: 1 }, { id: 7, number: 2 }, { id: 8, number: 3 }, { id: 9, number: 4 }, { id: 10, number: 5 } ] }
@@ -695,6 +701,9 @@ components:
       properties:
         stadiumId: { type: integer, format: int64 }
         stadiumName: { type: string }
+        field:
+          allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
+          description: Recuadro de la cancha (fijo), en % del plano
         sections:
           type: array
           items:
@@ -703,6 +712,11 @@ components:
               id: { type: integer, format: int64 }
               name: { type: string }
               sectionType: { $ref: '#/components/schemas/SectionType' }
+              capacity: { type: integer }
+              box:
+                allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
+                nullable: true
+                description: '`null` si la sección no está ubicada en el plano'
               rows:
                 type: array
                 items:
