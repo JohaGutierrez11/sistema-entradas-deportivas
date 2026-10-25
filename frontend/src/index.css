@@ -175,6 +175,11 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .pitch-lines rect, .pitch-lines line, .pitch-lines circle { fill: none; stroke: rgba(255, 255, 255, 0.8); stroke-width: 1; }
 .pitch-spot { fill: rgba(255, 255, 255, 0.85); }
 .pitch-goal { fill: #fff; }
+/* Cancha de coliseo (HU-42) */
+.map-track-court { fill: #b9b6ad; }
+.court-floor { fill: #d8a36a; }
+.court-lines rect, .court-lines line, .court-lines circle, .court-lines path { fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 1; }
+.court-hoop { fill: none; stroke: #c4441c; stroke-width: 1.2; }
 .map-section { cursor: pointer; outline: none; }
 .map-section rect { stroke: #fff; stroke-width: 1.5; transition: opacity 0.15s; }
 .map-section:hover rect, .map-section:focus-visible rect { opacity: 0.85; }
@@ -349,3 +354,13 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .module-card { display: flex; flex-direction: column; gap: 0.35rem; text-decoration: none; color: inherit; transition: border-color 0.15s; }
 .module-card:hover { border-color: var(--blue-600); }
 .module-card strong { color: var(--blue-900); }
+
+/* Configuración (HU-43) */
+.settings-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.settings-text { flex: 1 1 320px; }
+.settings-text p { margin: 0.25rem 0; }
+.settings-control { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; min-width: 14rem; }
+.settings-input { display: flex; align-items: center; gap: 0.5rem; }
+.settings-input input { width: 6.5rem; text-align: right; }
+.settings-readonly { font-weight: 600; font-size: 1.1rem; }

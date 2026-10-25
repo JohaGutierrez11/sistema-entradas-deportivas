@@ -56,6 +56,32 @@ function Pitch({ field }) {
   );
 }
 
+/** Cancha de coliseo (vertical, tableros arriba y abajo): piso de madera, llaves y líneas de triple. */
+function Court({ field }) {
+  const fx = px(field.x), fy = px(field.y), fw = px(field.width), fh = px(field.height);
+  const cx = fx + fw / 2;
+  const inset = 4;
+  const key = { w: fw * 0.34, h: fh * 0.2 };
+  const arc = fw * 0.4;                       // radio de la línea de triple
+  const top = fy + inset, bottom = fy + fh - inset;
+  return (
+    <g className="map-court">
+      <rect x={fx} y={fy} width={fw} height={fh} className="court-floor" />
+      <g className="court-lines">
+        <rect x={fx + inset} y={top} width={fw - inset * 2} height={fh - inset * 2} />
+        <line x1={fx + inset} y1={fy + fh / 2} x2={fx + fw - inset} y2={fy + fh / 2} />
+        <circle cx={cx} cy={fy + fh / 2} r={fw * 0.15} />
+        <rect x={cx - key.w / 2} y={top} width={key.w} height={key.h} />
+        <rect x={cx - key.w / 2} y={bottom - key.h} width={key.w} height={key.h} />
+        <path d={`M ${cx - arc} ${top} A ${arc} ${arc} 0 0 0 ${cx + arc} ${top}`} />
+        <path d={`M ${cx - arc} ${bottom} A ${arc} ${arc} 0 0 1 ${cx + arc} ${bottom}`} />
+      </g>
+      <circle cx={cx} cy={top + 5} r="2" className="court-hoop" />
+      <circle cx={cx} cy={bottom - 5} r="2" className="court-hoop" />
+    </g>
+  );
+}
+
 const NO_OCCUPIED = new Set();
 
 /**
@@ -69,10 +95,11 @@ export default function StadiumMap({ layout, occupied = NO_OCCUPIED, selectedSec
   const placed = layout.sections.filter((section) => section.box);
   const unplaced = layout.sections.filter((section) => !section.box);
   const { field } = layout;
+  const isColiseum = layout.venueType === 'COLISEO';   // HU-42: estadio o coliseo
 
   return (
     <div className="stadium">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="stadium-map" role="group" aria-label="Plano del estadio">
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="stadium-map" role="group" aria-label={isColiseum ? 'Plano del coliseo' : 'Plano del estadio'}>
         <defs>
           <pattern id="grass" width="24" height="24" patternUnits="userSpaceOnUse">
             <rect width="24" height="12" fill="#3f8f4f" />
@@ -82,8 +109,8 @@ export default function StadiumMap({ layout, occupied = NO_OCCUPIED, selectedSec
 
         <rect x="2" y="2" width={SIZE - 4} height={SIZE - 4} rx="48" className="map-bowl" />
         <rect x={px(field.x) - 7} y={px(field.y) - 7} width={px(field.width) + 14} height={px(field.height) + 14}
-              rx="14" className="map-track" />
-        <Pitch field={field} />
+              rx="14" className={isColiseum ? 'map-track map-track-court' : 'map-track'} />
+        {isColiseum ? <Court field={field} /> : <Pitch field={field} />}
 
         {placed.map((section) => {
           const free = freeSeats(section, occupied);

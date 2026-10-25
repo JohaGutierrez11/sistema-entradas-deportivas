@@ -5,7 +5,7 @@ import ec.edu.uce.tickets.match.entity.*;
 import java.util.List;
 
 /** Todo lo que el front necesita para dibujar el estadio (HU-38). Sin disponibilidad. */
-public record StadiumLayoutResponse(Long stadiumId, String stadiumName, BoxResponse field,
+public record StadiumLayoutResponse(Long stadiumId, String stadiumName, VenueType venueType, BoxResponse field,
                                     List<SectionLayout> sections) {
 
     public record SectionLayout(Long id, String name, SectionType sectionType, Integer capacity,
@@ -32,7 +32,7 @@ public record StadiumLayoutResponse(Long stadiumId, String stadiumName, BoxRespo
     }
 
     public static StadiumLayoutResponse from(Stadium stadium, List<Section> sections) {
-        return new StadiumLayoutResponse(stadium.getId(), stadium.getName(),
+        return new StadiumLayoutResponse(stadium.getId(), stadium.getName(), stadium.getVenueType(),
                 BoxResponse.from(SectionBox.FIELD),
                 sections.stream().map(SectionLayout::from).toList());
     }
