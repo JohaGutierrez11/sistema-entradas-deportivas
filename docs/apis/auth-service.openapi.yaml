@@ -264,6 +264,34 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/BusinessRule' }
 
+  /auth-api/v1/clients:
+    get:
+      tags: [Administración de usuarios y roles (ADMIN)]
+      summary: Datos de varios clientes por id
+      description: |
+        Solo **ADMIN** (HU-44). La usa la pantalla de reservas por evento para mostrar quién reservó:
+        reservation-service solo guarda el `client_id`. Una sola petición con hasta 100 ids; los que no
+        existen no vienen en la respuesta. Por minimización de datos, solo se devuelven los últimos
+        4 dígitos de la cédula.
+      operationId: getClientsByIds
+      parameters:
+        - { name: ids, in: query, required: true, schema: { type: string, example: '1,2,4' }, description: Ids separados por coma }
+      responses:
+        '200':
+          description: Clientes encontrados
+          content:
+            application/json:
+              example:
+                - { id: 1, fullName: María Fernanda López, username: mlopez, email: maria.lopez@test.com, cedulaLast4: '4567' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un ADMIN. Sin cuerpo.
+        '422':
+          description: Más de 100 ids
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /auth-api/v1/roles:
     get:
       tags: [Administración]

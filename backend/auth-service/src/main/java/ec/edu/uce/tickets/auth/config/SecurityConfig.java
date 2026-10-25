@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health").permitAll()
                         // Administración: solo ADMIN
                         .requestMatchers("/auth-api/v1/users/**", "/auth-api/v1/roles/**").hasRole("ADMIN")
+                        .requestMatchers("/auth-api/v1/clients", "/auth-api/v1/clients/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 // Leer el JWT del header "Authorization: Bearer ..."
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
