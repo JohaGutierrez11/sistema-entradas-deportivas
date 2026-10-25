@@ -703,6 +703,58 @@ paths:
         '403':
           description: El token no es de un ADMIN. Sin cuerpo.
 
+  /reservation-api/v1/parameters:
+    get:
+      tags: [Configuración]
+      summary: Parámetros del sistema
+      description: |
+        Solo **ADMIN** (HU-43). Devuelve todos los parámetros con su rango: `editable`, `min`, `max` y `unit`.
+        `RESERVATION_CODE_PREFIX` es de solo lectura.
+      operationId: getParameters
+      responses:
+        '200':
+          description: Lista de parámetros
+          content:
+            application/json:
+              example:
+                - { code: MAX_TICKETS_PER_MATCH, value: '6', description: Máximo de entradas por cliente y partido, editable: true, min: 1, max: 10, unit: entradas }
+                - { code: RESERVATION_CODE_PREFIX, value: RES, description: Prefijo del código legible de reserva, editable: false, min: null, max: null, unit: null }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un ADMIN. Sin cuerpo.
+
+  /reservation-api/v1/parameters/{code}:
+    put:
+      tags: [Configuración]
+      summary: Cambiar el valor de un parámetro
+      description: |
+        Solo **ADMIN** (HU-43). El valor debe ser un entero dentro del rango del parámetro. Aplica a las
+        reservas nuevas; las existentes conservan lo que tenían. El cambio queda en la auditoría.
+      operationId: updateParameter
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string, example: HOLD_MINUTES } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: { value: '15' }
+      responses:
+        '200': { description: Parámetro actualizado }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El token no es de un ADMIN. Sin cuerpo.
+        '404':
+          description: No existe el parámetro
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: No es un entero, está fuera de rango o el parámetro es de solo lectura
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ------------------------------------------------------------------ Tickets
   /reservation-api/v1/tickets/{publicId}/qr:
     get:
@@ -817,6 +869,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/OccupiedSeat' }
         refreshSeconds: { type: integer, example: 5 }
+        maxTicketsPerMatch: { type: integer, example: 6, description: 'Parámetro MAX_TICKETS_PER_MATCH (HU-43): el front lo usa como tope de selección' }
 
     OccupiedSeat:
       type: object

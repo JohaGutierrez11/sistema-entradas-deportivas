@@ -40,7 +40,7 @@ Parte práctica del examen complexivo de Ingeniería en Sistemas de Información
 **Requisitos:** Docker Desktop, JDK 17, Node 22 LTS.
 
 ```powershell
-# 1. Base de datos: contenedor pg-entradas, 3 bases, tablas, semillas y 116 pruebas
+# 1. Base de datos: contenedor pg-entradas, 3 bases, tablas, semillas y 120 pruebas
 cd database
 .\setup-db.ps1
 
@@ -117,7 +117,7 @@ Las reglas viven en el backend. Cuando el front las repite (por ejemplo, el plan
 - Toda fecha y hora es de Ecuador (`America/Guayaquil`).
 - Un usuario tiene un solo rol, asignado al crear la cuenta: los clientes se registran solos y el administrador viene en las semillas. No hay un endpoint para cambiar roles a propósito: sería una vía de escalamiento de privilegios.
 - El pago está fuera del alcance: "confirmar" la reserva representa el pago aprobado.
-- Las semillas modelan 7 localidades y 8 460 asientos por estadio; `total_capacity` conserva el aforo real. El modelo admite hasta 26 filas × 100 asientos por sección.
+- El escenario puede ser un **estadio o un coliseo** (`venue_type`), como pide el enunciado; solo cambia el dibujo del centro del plano. Las semillas modelan 5 estadios (7 localidades y 8 460 asientos cada uno) y 1 coliseo (6 localidades, 2 140 asientos); `total_capacity` conserva el aforo real. El modelo admite hasta 26 filas × 100 asientos por sección.
 - El ADMIN no compra entradas.
 
 ## Limitaciones conocidas
@@ -125,7 +125,7 @@ Las reglas viven en el backend. Cuando el front las repite (por ejemplo, el plan
 | Limitación | Por qué | Cómo se resolvería |
 |---|---|---|
 | Desactivar un usuario no lo saca de una sesión abierta | El JWT no tiene estado y dura 60 minutos | Tokens cortos con *refresh token*, o una lista de tokens revocados |
-| El admin ve "Cliente #id" en las reservas de un evento | El nombre vive en auth_db y reservation-service no lo conoce | Composición en el front o un BFF que junte ambas respuestas |
+| Las reservas de un evento juntan datos de dos servicios en el navegador | El nombre vive en auth_db y la reserva en reservation_db; la pantalla compone ambas respuestas (si auth-service cae, muestra "Cliente #id") | Un BFF o un API Gateway que haga esa composición en el servidor |
 | Las secciones no se editan ni se eliminan | Sus asientos están referenciados desde otra base, sin llave foránea | Permitirlo solo si el estadio no tiene partidos |
 | Swagger UI está abierto | Facilita la revisión del examen | Desactivarlo en producción (`springdoc.swagger-ui.enabled=false`) |
 | Sin despliegue con un solo comando | Pendiente del Sprint 4 | `docker compose` con los cinco contenedores |

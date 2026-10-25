@@ -7,10 +7,11 @@ import { formatShortDate } from '../../utils/format';
 import { todayIso } from '../../utils/matchStatus';
 
 const MODULES = [
-  { to: '/admin/estadios', title: 'Estadios', text: 'Estadios, secciones y su ubicación en el plano.' },
+  { to: '/admin/estadios', title: 'Escenarios', text: 'Estadios y coliseos, secciones y su ubicación en el plano.' },
   { to: '/admin/partidos', title: 'Partidos', text: 'Programar, iniciar, finalizar o cancelar.' },
   { to: '/admin/usuarios', title: 'Usuarios y roles', text: 'Activar, desactivar y desbloquear cuentas.' },
   { to: '/admin/reportes', title: 'Reportes', text: 'Reservas, ocupación por sección y PDF.' },
+  { to: '/admin/configuracion', title: 'Configuración', text: 'Entradas por cliente, tiempo para confirmar y cierre de la venta.' },
 ];
 
 /** Inicio del administrador: lo que pasa hoy y los accesos a cada módulo. */

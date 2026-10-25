@@ -97,9 +97,9 @@ export default function MatchesAdminPage() {
           ))}
         </div>
         <label className="toolbar-filter">
-          <span className="sr-only">Estadio</span>
+          <span className="sr-only">Escenario</span>
           <select value={stadiumId} onChange={(e) => setStadiumId(e.target.value)}>
-            <option value="">Todos los estadios</option>
+            <option value="">Todos los escenarios</option>
             {stadiums.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </label>
@@ -116,7 +116,7 @@ export default function MatchesAdminPage() {
               <tr>
                 <th scope="col">Partido</th>
                 <th scope="col">Fecha</th>
-                <th scope="col">Estadio</th>
+                <th scope="col">Escenario</th>
                 <th scope="col">Estado</th>
                 <th scope="col"><span className="sr-only">Acciones</span></th>
               </tr>

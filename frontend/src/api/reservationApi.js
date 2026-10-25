@@ -40,6 +40,11 @@ export const reservationApi = {
   /** El mismo reporte en PDF (Blob), con los mismos filtros. */
   getAdminReportPdf: (filters) => request(`${BASE}/reports/reservations/pdf`, { query: filters }),
 
+  /** Configuración del sistema (HU-43), solo ADMIN. */
+  getParameters: () => request(`${BASE}/parameters`),
+
+  updateParameter: (code, value) => request(`${BASE}/parameters/${code}`, { method: 'PUT', body: { value } }),
+
   /** PDF con una página por entrada (Blob). */
   getTicketsPdf: (publicId) => request(`${BASE}/reservations/${publicId}/tickets/pdf`),
 };

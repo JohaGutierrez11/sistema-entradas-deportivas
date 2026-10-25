@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { adminAuthApi } from '../../api/adminAuthApi';
 import { matchApi } from '../../api/matchApi';
 import { reservationApi } from '../../api/reservationApi';
 import StatusBadge from '../../components/StatusBadge';
@@ -237,6 +238,17 @@ function MatchReservations({ matchId, status }) {
   }, [matchId, status]);
   useEffect(load, [load]);
 
+  // Composición en el cliente (HU-44): las reservas vienen de reservation-service y los nombres de
+  // auth-service. Una sola petición con todos los ids; si auth-service no responde, se muestra el id.
+  const [clients, setClients] = useState(new Map());
+  useEffect(() => {
+    const ids = [...new Set((items ?? []).map((item) => item.clientId))];
+    if (ids.length === 0) return;
+    adminAuthApi.getClients(ids)
+      .then((list) => setClients(new Map(list.map((c) => [c.id, c]))))
+      .catch(() => setClients(new Map()));
+  }, [items]);
+
   // Nombres de los asientos ("Palco Occidental · Fila A · Asiento 3"): del plano del estadio del partido
   useEffect(() => {
     matchApi.getMatch(matchId)
@@ -291,7 +303,17 @@ function MatchReservations({ matchId, status }) {
                 return (
                   <tr key={r.publicId}>
                     <td className="nowrap"><strong>{r.code}</strong></td>
-                    <td>Cliente #{clientId}</td>
+                    <td>
+                      {clients.has(clientId) ? (
+                        <>
+                          <strong>{clients.get(clientId).fullName}</strong>
+                          <div className="muted small">
+                            {clients.get(clientId).username} · C.I. ****{clients.get(clientId).cedulaLast4}
+                          </div>
+                          <div className="muted small">{clients.get(clientId).email}</div>
+                        </>
+                      ) : `Cliente #${clientId}`}
+                    </td>
                     <td>
                       {seats.length === 0 ? <span className="muted">—</span> : (
                         <ul className="seat-names">{seats.map((id) => <li key={id}>{label(id)}</li>)}</ul>

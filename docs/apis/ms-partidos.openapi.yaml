@@ -623,6 +623,10 @@ components:
               message: { type: string, example: no debe estar vacío }
 
     # --------------------------------------------------------------- Estadios
+    VenueType:
+      type: string
+      enum: [ESTADIO, COLISEO]
+      description: Tipo de escenario del enunciado ("escenario (estadio/coliseo)"). Solo cambia el dibujo del centro del plano.
     StadiumRequest:
       type: object
       required: [name, location, totalCapacity]
@@ -631,6 +635,9 @@ components:
         description: { type: string, maxLength: 250, example: Escenario principal de Quito }
         location: { type: string, minLength: 3, maxLength: 200, example: 'Av. 6 de Diciembre y Naciones Unidas, Quito' }
         totalCapacity: { type: integer, minimum: 1, maximum: 200000, example: 35000 }
+        venueType:
+          $ref: '#/components/schemas/VenueType'
+          description: Opcional. Si no se envía, se crea como ESTADIO; al editar se conserva el tipo actual (HU-42)
     StadiumResponse:
       type: object
       properties:
@@ -639,6 +646,7 @@ components:
         description: { type: string, example: Escenario principal de Quito }
         location: { type: string, example: 'Av. 6 de Diciembre y Naciones Unidas, Quito' }
         totalCapacity: { type: integer, example: 35000 }
+        venueType: { $ref: '#/components/schemas/VenueType' }
 
     # --------------------------------------------------------------- Secciones
     SectionType:
@@ -704,6 +712,7 @@ components:
       properties:
         stadiumId: { type: integer, format: int64 }
         stadiumName: { type: string }
+        venueType: { $ref: '#/components/schemas/VenueType' }
         field:
           allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
           description: Recuadro de la cancha (fijo), en % del plano

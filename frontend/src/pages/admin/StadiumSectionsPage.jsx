@@ -8,7 +8,7 @@ import { DEFAULT_BOX, FIELD_BOX, findBoxProblem, sectionTypeLabel } from '../../
 
 const numberFormat = new Intl.NumberFormat('es-EC');
 
-/** Secciones y plano de un estadio (HU-28 + HU-38): crear secciones y ubicarlas sobre el mapa. */
+/** Secciones y plano de un escenario (HU-28 + HU-38): crear secciones y ubicarlas sobre el mapa. */
 export default function StadiumSectionsPage() {
   const { stadiumId } = useParams();
   const [stadium, setStadium] = useState(null);
@@ -32,8 +32,9 @@ export default function StadiumSectionsPage() {
   // El mapa reusa StadiumMap: la sección que se está moviendo se oculta y se dibuja como borrador
   const layout = useMemo(() => ({
     field: FIELD_BOX,
+    venueType: stadium?.venueType,
     sections: (sections ?? []).filter((s) => s.id !== editingId).map((s) => ({ ...s, rows: [] })),
-  }), [sections, editingId]);
+  }), [sections, editingId, stadium]);
 
   function openBoxEditor(section) {
     setNotice(null);
@@ -56,11 +57,11 @@ export default function StadiumSectionsPage() {
     return (
       <section>
         <p className="alert alert-error" role="alert">{error}</p>
-        <Link to="/admin/estadios">← Volver a estadios</Link>
+        <Link to="/admin/estadios">← Volver a escenarios</Link>
       </section>
     );
   }
-  if (!stadium || !sections) return <p className="muted">Cargando estadio…</p>;
+  if (!stadium || !sections) return <p className="muted">Cargando escenario…</p>;
 
   const freeCapacity = stadium.totalCapacity - usedCapacity;
   const usedPercent = Math.min(100, Math.round((usedCapacity / stadium.totalCapacity) * 100));
@@ -68,7 +69,7 @@ export default function StadiumSectionsPage() {
 
   return (
     <section>
-      <Link to="/admin/estadios" className="back-link">← Estadios</Link>
+      <Link to="/admin/estadios" className="back-link">← Escenarios</Link>
       <div className="page-header page-header-row">
         <div>
           <h1>{stadium.name}</h1>
@@ -129,7 +130,7 @@ function SectionList({ sections, onPlace }) {
   if (sections.length === 0) {
     return (
       <div className="card empty-state">
-        <p><strong>Este estadio aún no tiene secciones.</strong></p>
+        <p><strong>Este escenario aún no tiene secciones.</strong></p>
         <p className="muted">Sin secciones no hay asientos que vender.</p>
       </div>
     );
