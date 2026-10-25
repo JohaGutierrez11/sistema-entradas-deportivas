@@ -23,6 +23,10 @@ const LABELS = {
     title: 'Actualización del mapa de asientos',
     help: 'Cada cuántos segundos el mapa del cliente vuelve a consultar qué asientos están ocupados.',
   },
+  CANCEL_DEADLINE_HOURS: {
+    title: 'Plazo para cancelar una reserva confirmada',
+    help: 'Horas antes del inicio hasta las que el cliente puede cancelar. Con 0 puede cancelar hasta que empiece el partido. El administrador no tiene este límite.',
+  },
   RESERVATION_CODE_PREFIX: {
     title: 'Prefijo del código de reserva',
     help: 'Solo lectura: cambiarlo mezclaría formatos de código en el historial de reservas.',

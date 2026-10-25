@@ -34,7 +34,8 @@ public class ParameterAdminService {
             "HOLD_MINUTES", new Rule(1, 30, "minutos"),
             "SALES_CLOSE_OFFSET_MINUTES", new Rule(-1440, 120, "minutos respecto del inicio"),
             "EXPIRATION_JOB_SECONDS", new Rule(10, 600, "segundos"),
-            "AVAILABILITY_REFRESH_SECONDS", new Rule(2, 60, "segundos"));
+            "AVAILABILITY_REFRESH_SECONDS", new Rule(2, 60, "segundos"),
+            "CANCEL_DEADLINE_HOURS", new Rule(0, 168, "horas antes del inicio"));
 
     private final ParameterRepository parameterRepository;
     private final AuditService auditService;

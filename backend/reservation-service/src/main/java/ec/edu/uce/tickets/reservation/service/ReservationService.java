@@ -23,6 +23,8 @@ import jakarta.persistence.criteria.Predicate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -36,16 +38,21 @@ public class ReservationService {
     private final SeatLockRepository seatLockRepository;
     private final AuditService auditService;
     private final SalesWindow salesWindow;
+    private final ParameterService parameterService;
+
+    private static final ZoneId ECUADOR = ZoneId.of("America/Guayaquil");
+    private static final DateTimeFormatter DEADLINE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     public ReservationService(MatchServiceClient matchServiceClient, ReservationWriter reservationWriter,
                               ReservationRepository reservationRepository, SeatLockRepository seatLockRepository, AuditService auditService,
-                              SalesWindow salesWindow) {
+                              SalesWindow salesWindow, ParameterService parameterService) {
         this.matchServiceClient = matchServiceClient;
         this.reservationWriter = reservationWriter;
         this.reservationRepository = reservationRepository;
         this.seatLockRepository = seatLockRepository;
         this.auditService = auditService;
         this.salesWindow = salesWindow;
+        this.parameterService = parameterService;
     }
 
     // SIN @Transactional: primero se consulta a match-service y después se abre la transacción
@@ -111,6 +118,16 @@ public class ReservationService {
             MatchInfo match = matchServiceClient.getMatch(reservation.getMatchId());
             if ("EN_CURSO".equals(match.status()) || "FINALIZADO".equals(match.status())) {
                 throw new BusinessRuleException("No se puede cancelar porque el partido está " + match.status());
+            }
+            // HU-45: el cliente cancela una reserva pagada solo hasta CANCEL_DEADLINE_HOURS antes del inicio.
+            // El admin no tiene ese límite (atiende casos excepcionales) y un partido CANCELADO siempre se puede.
+            if (!admin && "PROGRAMADO".equals(match.status())) {
+                int hours = parameterService.getInt("CANCEL_DEADLINE_HOURS");
+                LocalDateTime deadline = LocalDateTime.of(match.matchDate(), match.matchTime()).minusHours(hours);
+                if (!LocalDateTime.now(ECUADOR).isBefore(deadline)) {
+                    throw new BusinessRuleException("Las reservas confirmadas se pueden cancelar hasta " + hours
+                            + " horas antes del inicio del partido (el plazo venció el " + deadline.format(DEADLINE_FORMAT) + ")");
+                }
             }
         }
 

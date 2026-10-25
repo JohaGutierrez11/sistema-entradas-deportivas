@@ -39,6 +39,8 @@ info:
     | Un ticket por asiento, con un código QR aleatorio de 64 caracteres | HU-18 | — |
     | "Mis reservas" solo muestra las del cliente del token; el ADMIN no tiene "mis reservas" | HU-20 | `403` |
     | Cancelar: el dueño o un ADMIN; no si está cancelada, expirada, con entradas usadas (`409`) o el partido ya empezó (`422`) | HU-19 | `404` / `409` / `422` |
+    | El cliente cancela una reserva confirmada solo hasta `CANCEL_DEADLINE_HOURS` (24) antes del inicio; el ADMIN no tiene ese límite | HU-45 · parámetro | `422` |
+    | Si el partido se cancela, una tarea programada cancela sus reservas activas y anula sus entradas (consistencia eventual, hasta 1 minuto) | HU-46 | — |
 
     **Asiento ocupado** = vendido (`RESERVED`) **o** retenido (`HELD`) por una reserva que aún no vence.
 

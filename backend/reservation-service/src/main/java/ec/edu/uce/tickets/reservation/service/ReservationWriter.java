@@ -168,6 +168,20 @@ public class ReservationWriter {
 
     // ------------------------------------------------------------------ HU-19: cancelar
 
+    /**
+     * HU-46: el partido se canceló. Todas sus reservas activas pasan a CANCELADA, sus asientos se liberan
+     * y sus entradas quedan ANULADAS (mismo cambio de estado que una cancelación normal).
+     * Devuelve los códigos para la auditoría.
+     */
+    @Transactional
+    public List<String> cancelAllOfMatch(Long matchId) {
+        LocalDateTime now = LocalDateTime.now(ECUADOR);
+        List<Reservation> active = reservationRepository.findByMatchIdAndStatusInForUpdate(matchId,
+                List.of(ReservationStatus.PENDIENTE, ReservationStatus.CONFIRMADA));
+        active.forEach(reservation -> reservation.cancel(now));
+        return active.stream().map(Reservation::getCode).toList();
+    }
+
     @Transactional
     public ReservationResponse cancel(UUID publicId, Long clientId, boolean admin) {
         // Mismo bloqueo que confirmar: cancelar, confirmar y expirar nunca se pisan

@@ -154,7 +154,10 @@ function MatchActions({ match, busy, confirming, onEdit, onAsk, onCancelAsk, onC
     const action = TRANSITION_ACTIONS[confirming.next];
     return (
       <div className="row-actions">
-        <span className="small">¿{action.label}? No se puede deshacer.</span>
+        <span className="small">
+          ¿{action.label}? No se puede deshacer.
+          {confirming.next === 'CANCELADO' && ' Se cancelarán sus reservas y se anularán las entradas vendidas.'}
+        </span>
         <button type="button" className="btn btn-small btn-danger" disabled={busy}
                 onClick={() => onChange(confirming.next)}>Sí</button>
         <button type="button" className="btn btn-small" disabled={busy} onClick={onCancelAsk}>No</button>

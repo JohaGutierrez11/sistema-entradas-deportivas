@@ -32,7 +32,8 @@ INSERT INTO parameter (id, code, value, description) VALUES
   (3, 'EXPIRATION_JOB_SECONDS',       '60',  'Cada cuántos segundos se buscan reservas pendientes vencidas'),
   (4, 'AVAILABILITY_REFRESH_SECONDS', '5',   'Cada cuántos segundos el mapa de asientos consulta la disponibilidad'),
   (5, 'RESERVATION_CODE_PREFIX',      'RES', 'Prefijo del código legible de reserva'),
-  (6, 'SALES_CLOSE_OFFSET_MINUTES',   '10',  'Minutos respecto del inicio en que cierra la venta online (+ después, - antes)');
+  (6, 'SALES_CLOSE_OFFSET_MINUTES',   '10',  'Minutos respecto del inicio en que cierra la venta online (+ después, - antes)'),
+  (7, 'CANCEL_DEADLINE_HOURS',        '24',  'Horas antes del inicio hasta las que el cliente puede cancelar una reserva confirmada');
 
 -- ---------------------------------------------------------------------
 -- reservation
