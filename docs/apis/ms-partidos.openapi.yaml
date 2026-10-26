@@ -537,6 +537,43 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /match-api/v1/internal/seats/labels:
+    post:
+      tags: [Interno]
+      summary: Nombre legible de asientos
+      description: |
+        Lo llama **ms-reservas** al generar el PDF de entradas, para imprimir
+        "Sección · Fila · Asiento" en lugar del id técnico. Los ids que no existen no aparecen.
+      operationId: seatLabels
+      security: []
+      parameters:
+        - name: X-Internal-Key
+          in: header
+          required: true
+          description: Clave compartida entre microservicios. Si falta o no coincide → `401`.
+          schema: { type: string, example: dev-internal-key-cambiar-en-produccion }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeatLabelsRequest' }
+            example: { seatIds: [14881, 14882] }
+      responses:
+        '200':
+          description: Nombre de cada asiento encontrado
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SeatLabel' }
+              example: [{ seatId: 14881, sectionName: Tribuna, rowLetter: C, seatNumber: 12 }]
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Falta el encabezado X-Internal-Key o no es válido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -796,6 +833,23 @@ components:
           uniqueItems: true
           items: { type: integer, format: int64, minimum: 1 }
           example: [35, 36, 37]
+    SeatLabelsRequest:
+      type: object
+      required: [seatIds]
+      properties:
+        seatIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: integer, format: int64 }
+    SeatLabel:
+      type: object
+      properties:
+        seatId: { type: integer, format: int64 }
+        sectionName: { type: string }
+        rowLetter: { type: string }
+        seatNumber: { type: integer }
     SeatValidationResponse:
       type: object
       properties:
