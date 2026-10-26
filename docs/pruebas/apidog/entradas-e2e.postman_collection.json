@@ -1,0 +1,1958 @@
+{
+  "info": {
+    "_postman_id": "ee0aeb28-9554-43b1-b242-02cc1d0cb45c",
+    "name": "Entradas deportivas · Pruebas E2E de API",
+    "description": "Ejecutar en orden: cada carpeta usa variables que deja la anterior. Requiere los tres servicios levantados y las semillas recién cargadas.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Autenticación",
+      "item": [
+        {
+          "name": "AUT-01 · Login del administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Token tipo Bearer y rol ADMIN\", () => { pm.expect(j.tokenType).to.eql(\"Bearer\"); pm.expect(j.role).to.eql(\"ADMIN\"); pm.expect(j.accessToken).to.be.a(\"string\"); });",
+                  "pm.collectionVariables.set(\"adminToken\", j.accessToken);",
+                  "const decode = t => { let p = t.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\"); while (p.length % 4) p += \"=\"; return JSON.parse(CryptoJS.enc.Base64.parse(p).toString(CryptoJS.enc.Utf8)); };",
+                  "pm.test(\"Expira en 60 minutos\", () => pm.expect(j.expiresIn).to.eql(3600));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-02 · Login de cliente (María)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"mlopez\",\n  \"password\": \"{{clientPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Token tipo Bearer y rol CLIENTE\", () => { pm.expect(j.tokenType).to.eql(\"Bearer\"); pm.expect(j.role).to.eql(\"CLIENTE\"); pm.expect(j.accessToken).to.be.a(\"string\"); });",
+                  "pm.collectionVariables.set(\"clientToken\", j.accessToken);",
+                  "const decode = t => { let p = t.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\"); while (p.length % 4) p += \"=\"; return JSON.parse(CryptoJS.enc.Base64.parse(p).toString(CryptoJS.enc.Utf8)); };",
+                  "const c = decode(j.accessToken);",
+                  "pm.test(\"El JWT lleva rol y clientId (lo usa reservation-service)\", () => { pm.expect(c.role).to.eql(\"CLIENTE\"); pm.expect(c.clientId).to.be.a(\"number\"); });",
+                  "pm.test(\"El JWT no lleva la contraseña\", () => pm.expect(JSON.stringify(c)).to.not.include(\"password\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-03 · Login de otro cliente (Carlos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"cvera\",\n  \"password\": \"{{clientPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Token tipo Bearer y rol CLIENTE\", () => { pm.expect(j.tokenType).to.eql(\"Bearer\"); pm.expect(j.role).to.eql(\"CLIENTE\"); pm.expect(j.accessToken).to.be.a(\"string\"); });",
+                  "pm.collectionVariables.set(\"client2Token\", j.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-04 · Contraseña incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dmorales\",\n  \"password\": \"Incorrecta2026*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-05 · Usuario inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"noexiste\",\n  \"password\": \"Cliente2026*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-06 · Campos vacíos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"\",\n  \"password\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-07 · Cuenta inactiva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"rcastillo\",\n  \"password\": \"{{clientPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-08 · Cuenta bloqueada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pbravo\",\n  \"password\": \"{{clientPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 423\", () => pm.response.to.have.status(423));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AUT-09 · Registro con cédula inválida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Prueba\",\n  \"lastName\": \"Apidog\",\n  \"cedula\": \"1234567890\",\n  \"nationality\": \"Ecuatoriana\",\n  \"address\": \"Av. Universitaria, Quito\",\n  \"phone\": \"0991234567\",\n  \"email\": \"prueba.apidog@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));",
+                  "pm.test(\"El error señala la cédula\", () => pm.expect(pm.response.text()).to.include(\"cedula\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Autorización y roles",
+      "item": [
+        {
+          "name": "AZ-01 · Sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{authUrl}}/auth-api/v1/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AZ-02 · Token alterado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tamperedToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.collectionVariables.get(\"clientToken\");",
+                  "pm.collectionVariables.set(\"tamperedToken\", t.slice(0, -2) + (t.endsWith(\"AA\") ? \"BB\" : \"AA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AZ-03 · Cliente consulta usuarios (solo ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AZ-04 · Admin consulta usuarios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{authUrl}}/auth-api/v1/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve una lista\", () => pm.expect(pm.response.json()).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AZ-05 · El administrador no puede reservar (segregación de funciones)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [16921]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Escenarios deportivos",
+      "item": [
+        {
+          "name": "ESC-01 · Crear un coliseo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/stadiums",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{stadiumName}}\",\n  \"location\": \"Av. Universitaria, Quito\",\n  \"totalCapacity\": 3000,\n  \"venueType\": \"COLISEO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Se guarda como COLISEO\", () => pm.expect(j.venueType).to.eql(\"COLISEO\"));",
+                  "pm.collectionVariables.set(\"stadiumId\", j.id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"stadiumName\", \"Coliseo Prueba Apidog \" + Date.now());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ESC-02 · Nombre duplicado escrito distinto (mayúsculas)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/stadiums",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{stadiumNameUpper}}\",\n  \"location\": \"Quito\",\n  \"totalCapacity\": 3000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"stadiumNameUpper\", pm.collectionVariables.get(\"stadiumName\").toUpperCase());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ESC-03 · Capacidad inválida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/stadiums",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Estadio Capacidad Cero\",\n  \"location\": \"Quito\",\n  \"totalCapacity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ESC-04 · Cliente intenta crear un escenario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/stadiums",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Estadio No Autorizado\",\n  \"location\": \"Quito\",\n  \"totalCapacity\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ESC-05 · Plano del estadio 3",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/stadiums/3/layout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Tiene secciones\", () => pm.expect(pm.response.json().sections).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ESC-06 · Eliminar el coliseo de prueba (limpieza)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/stadiums/{{stadiumId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200/204\", () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Reserva de asientos",
+      "item": [
+        {
+          "name": "RES-01 · Disponibilidad del partido 4",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/matches/4/availability"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Venta abierta y límite configurado\", () => { pm.expect(j.salesOpen).to.be.true; pm.expect(j.maxTicketsPerMatch).to.be.within(1, 10); });",
+                  "pm.test(\"Indica cada cuánto refrescar\", () => pm.expect(j.refreshSeconds).to.be.above(0));",
+                  "const occupied = new Set(pm.response.json().occupiedSeats.map(s => s.seatId));",
+                  "const free = []; for (let id = 16921; id <= 25380 && free.length < 400; id++) if (!occupied.has(id)) free.push(id);",
+                  "const start = Math.floor(Math.random() * (free.length - 8));",
+                  "const seats = free.slice(start, start + 8);",
+                  "pm.collectionVariables.set(\"seatA\", seats[0]);",
+                  "pm.collectionVariables.set(\"seatC\", seats[1]);",
+                  "pm.collectionVariables.set(\"seatsSix\", JSON.stringify(seats.slice(2, 8)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-02 · Reservar un asiento libre",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [{{seatA}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Queda PENDIENTE con vencimiento\", () => { pm.expect(j.status).to.eql(\"PENDIENTE\"); pm.expect(j.expiresAt).to.be.a(\"string\"); });",
+                  "pm.test(\"Código con prefijo RES-\", () => pm.expect(j.code).to.match(/^RES-/));",
+                  "pm.collectionVariables.set(\"resA\", j.publicId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-03 · Otro cliente intenta el mismo asiento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{client2Token}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [{{seatA}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-04 · Otro cliente consulta la reserva ajena (IDOR)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{client2Token}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/{{resA}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-05 · Confirmar la reserva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/{{resA}}/confirm"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"CONFIRMADA con un ticket ACTIVO\", () => { pm.expect(j.status).to.eql(\"CONFIRMADA\"); pm.expect(j.tickets).to.have.lengthOf(1); pm.expect(j.tickets[0].status).to.eql(\"ACTIVO\"); });",
+                  "pm.test(\"El QR es un código opaco, no una URL\", () => pm.expect(j.tickets[0].qrCode).to.not.match(/^https?:/));",
+                  "pm.collectionVariables.set(\"qrA\", j.tickets[0].qrCode);",
+                  "pm.collectionVariables.set(\"ticketA\", j.tickets[0].publicId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-06 · Confirmar dos veces",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/{{resA}}/confirm"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-07 · Descargar las entradas en PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/{{resA}}/tickets/pdf"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es un PDF\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/pdf\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-08 · Imagen del QR",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/tickets/{{ticketA}}/qr"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es un PNG\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"image/png\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RES-09 · QR de un ticket ajeno",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{client2Token}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/tickets/{{ticketA}}/qr"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Reglas de negocio",
+      "item": [
+        {
+          "name": "REG-01 · Más de 6 asientos en una solicitud",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [1, 2, 3, 4, 5, 6, 7]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REG-02 · Superar el límite de entradas por partido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": {{seatsSix}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REG-03 · Reservar en un partido FINALIZADO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 5,\n  \"seatIds\": [\n    33900\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REG-04 · Reservar en un partido CANCELADO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 6,\n  \"seatIds\": [\n    900\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REG-05 · Asiento de otro estadio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [\n    1\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REG-06 · Partido inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 999999,\n  \"seatIds\": [\n    16921\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Cancelación",
+      "item": [
+        {
+          "name": "CAN-01 · Crear una reserva para cancelar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [{{seatC}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"resC\", pm.response.json().publicId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CAN-02 · Cancelar la reserva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/{{resC}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda CANCELADA\", () => pm.expect(pm.response.json().status).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CAN-03 · Cancelar dos veces",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/{{resC}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CAN-04 · El asiento cancelado vuelve a estar libre",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/matches/4/availability"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const seat = Number(pm.collectionVariables.get(\"seatC\"));",
+                  "pm.test(\"seatC ya no figura como ocupado\", () => pm.expect(pm.response.json().occupiedSeats.map(s => s.seatId)).to.not.include(seat));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Control de acceso (QR)",
+      "item": [
+        {
+          "name": "ACC-01 · QR presentado en otro partido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/tickets/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCode\": \"{{qrA}}\",\n  \"matchId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Resultado OTRO_PARTIDO\", () => { pm.expect(j.result).to.eql(\"OTRO_PARTIDO\"); pm.expect(j.valid).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ACC-02 · QR válido en su partido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/tickets/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCode\": \"{{qrA}}\",\n  \"matchId\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Resultado VALIDA\", () => { pm.expect(j.result).to.eql(\"VALIDA\"); pm.expect(j.valid).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ACC-03 · El mismo QR por segunda vez",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/tickets/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCode\": \"{{qrA}}\",\n  \"matchId\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Resultado YA_UTILIZADA\", () => { pm.expect(j.result).to.eql(\"YA_UTILIZADA\"); pm.expect(j.valid).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ACC-04 · QR inventado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/tickets/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCode\": \"codigo-que-no-existe\",\n  \"matchId\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Resultado NO_RECONOCIDA\", () => { pm.expect(j.result).to.eql(\"NO_RECONOCIDA\"); pm.expect(j.valid).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ACC-05 · Un cliente intenta validar entradas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/tickets/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCode\": \"{{qrA}}\",\n  \"matchId\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ACC-06 · Cancelar una reserva con la entrada ya usada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/{{resA}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 Reportes y configuración",
+      "item": [
+        {
+          "name": "REP-01 · Mis reservas (cliente)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reservations/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REP-02 · Reporte general filtrado por partido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reports/reservations?matchId=4"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REP-03 · Reservas del partido con su cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reports/matches/4/reservations"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Cada fila trae clientId\", () => pm.response.json().forEach(r => pm.expect(r.clientId).to.be.a(\"number\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REP-04 · Un cliente pide el reporte general",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/reports/reservations"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CFG-01 · Listar parámetros",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/parameters"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye MAX_TICKETS_PER_MATCH\", () => pm.expect(pm.response.json().map(p => p.code)).to.include(\"MAX_TICKETS_PER_MATCH\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CFG-02 · Parámetro fuera de rango",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/parameters/MAX_TICKETS_PER_MATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"11\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CFG-03 · Parámetro de solo lectura",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/parameters/RESERVATION_CODE_PREFIX",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"XYZ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Error en formato Problem Details\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"problem+json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CFG-04 · Un cliente intenta cambiar un parámetro",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{resUrl}}/reservation-api/v1/parameters/MAX_TICKETS_PER_MATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 Comunicación entre servicios",
+      "item": [
+        {
+          "name": "INT-01 · Endpoint interno sin clave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/internal/seats/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [\n    16921\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "INT-02 · Validar asientos con la clave interna",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/internal/seats/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchId\": 4,\n  \"seatIds\": [\n    16921,\n    1\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Separa válidos e inválidos\", () => { pm.expect(j.validSeatIds).to.include(16921); pm.expect(j.invalidSeatIds).to.include(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "INT-03 · Nombre legible de asientos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Key",
+                "value": "{{internalKey}}"
+              }
+            ],
+            "url": "{{matchUrl}}/match-api/v1/internal/seats/labels",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seatIds\": [\n    16921\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae sección, fila y número\", () => { const s = pm.response.json()[0]; pm.expect(s.sectionName).to.be.a(\"string\"); pm.expect(s.rowLetter).to.be.a(\"string\"); pm.expect(s.seatNumber).to.be.a(\"number\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "clientToken",
+      "value": ""
+    },
+    {
+      "key": "client2Token",
+      "value": ""
+    },
+    {
+      "key": "tamperedToken",
+      "value": ""
+    },
+    {
+      "key": "stadiumName",
+      "value": ""
+    },
+    {
+      "key": "stadiumNameUpper",
+      "value": ""
+    },
+    {
+      "key": "stadiumId",
+      "value": ""
+    },
+    {
+      "key": "seatA",
+      "value": ""
+    },
+    {
+      "key": "seatC",
+      "value": ""
+    },
+    {
+      "key": "seatsSix",
+      "value": ""
+    },
+    {
+      "key": "resA",
+      "value": ""
+    },
+    {
+      "key": "resC",
+      "value": ""
+    },
+    {
+      "key": "qrA",
+      "value": ""
+    },
+    {
+      "key": "ticketA",
+      "value": ""
+    }
+  ]
+}
