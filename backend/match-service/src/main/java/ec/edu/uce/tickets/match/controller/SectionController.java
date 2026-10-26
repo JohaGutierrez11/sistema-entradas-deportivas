@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.match.controller;
 import ec.edu.uce.tickets.match.dto.SectionBoxRequest;
 import ec.edu.uce.tickets.match.dto.SectionRequest;
 import ec.edu.uce.tickets.match.dto.SectionResponse;
+import ec.edu.uce.tickets.match.dto.SectionUpdateRequest;
 import ec.edu.uce.tickets.match.dto.StadiumLayoutResponse;
 import ec.edu.uce.tickets.match.service.SectionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +40,12 @@ public class SectionController {
                 .buildAndExpand(created.id())
                 .toUri();
         return ResponseEntity.created(location).body(created);
+    }
+
+    @PutMapping("/sections/{sectionId}")
+    public SectionResponse update(@PathVariable Long sectionId,
+                                  @Valid @RequestBody SectionUpdateRequest request) {
+        return sectionService.update(sectionId, request);
     }
 
     @PutMapping("/sections/{sectionId}/box")

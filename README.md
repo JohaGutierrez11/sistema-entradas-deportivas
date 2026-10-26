@@ -129,7 +129,7 @@ Las reglas viven en el backend. Cuando el front las repite (por ejemplo, el plan
 |---|---|---|
 | Desactivar un usuario no lo saca de una sesión abierta | El JWT no tiene estado y dura 60 minutos | Tokens cortos con *refresh token*, o una lista de tokens revocados |
 | Las reservas de un evento juntan datos de dos servicios en el navegador | El nombre vive en auth_db y la reserva en reservation_db; la pantalla compone ambas respuestas (si auth-service cae, muestra "Cliente #id") | Un BFF o un API Gateway que haga esa composición en el servidor |
-| Las secciones no se editan ni se eliminan | Sus asientos están referenciados desde otra base, sin llave foránea | Permitirlo solo si el estadio no tiene partidos |
+| Las secciones solo permiten cambiar nombre y descripción; no se eliminan ni cambian sus filas | Sus asientos están referenciados desde otra base, sin llave foránea | Permitirlo solo si el estadio no tiene partidos |
 | Swagger UI está abierto | Facilita la revisión del examen | Desactivarlo en producción (`springdoc.swagger-ui.enabled=false`) |
 | Sin despliegue con un solo comando | Pendiente del Sprint 4 | `docker compose` con los cinco contenedores |
 

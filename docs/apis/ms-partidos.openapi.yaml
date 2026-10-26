@@ -271,9 +271,8 @@ paths:
       tags: [Secciones]
       summary: Editar nombre y descripción de una sección
       description: |
-        > **Pendiente: todavía no implementado** (diseñado en HU-07).
-
-        Solo ADMIN. Por seguridad no se pueden cambiar las filas ni los asientos de una
+        Solo ADMIN. El nombre no puede repetirse dentro del estadio (se compara sin tildes,
+        mayúsculas ni espacios repetidos → `409`). Por seguridad no se pueden cambiar las filas ni los asientos de una
         sección existente: podrían tener entradas vendidas. Para otra distribución,
         se elimina la sección y se crea una nueva.
       operationId: updateSection

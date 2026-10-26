@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { matchApi } from '../../api/matchApi';
 import BoxEditor from '../../components/admin/BoxEditor';
+import SectionEditForm from '../../components/admin/SectionEditForm';
 import SectionForm from '../../components/admin/SectionForm';
 import StadiumMap from '../../components/StadiumMap';
 import { DEFAULT_BOX, FIELD_BOX, findBoxProblem, sectionTypeLabel } from '../../utils/stadiumPlan';
@@ -15,7 +16,7 @@ export default function StadiumSectionsPage() {
   const [sections, setSections] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
-  const [panel, setPanel] = useState(null);   // null · { mode: 'new' } · { mode: 'box', section, box }
+  const [panel, setPanel] = useState(null);   // null · { mode: 'new' } · { mode: 'box', section, box } · { mode: 'edit', section }
 
   const load = useCallback(() => {
     Promise.all([matchApi.getStadium(stadiumId), matchApi.listSections(stadiumId)])
@@ -45,6 +46,12 @@ export default function StadiumSectionsPage() {
     setNotice(`Se creó ${section.name} con ${section.capacity} asientos. Ahora ubícala en el plano.`);
     setSections((current) => [...current, section]);
     setPanel({ mode: 'box', section, box: DEFAULT_BOX });
+  }
+
+  function handleSectionUpdated(section) {
+    setNotice(`Se guardaron los cambios de ${section.name}.`);
+    setPanel(null);
+    load();
   }
 
   function handleBoxSaved(section) {
@@ -119,14 +126,21 @@ export default function StadiumSectionsPage() {
                        onChange={(box) => setPanel((current) => ({ ...current, box }))}
                        onSaved={handleBoxSaved} onCancel={() => setPanel(null)} />
           )}
-          {!panel && <SectionList sections={sections} onPlace={openBoxEditor} />}
+          {panel?.mode === 'edit' && (
+            <SectionEditForm key={panel.section.id} section={panel.section}
+                             onSaved={handleSectionUpdated} onCancel={() => setPanel(null)} />
+          )}
+          {!panel && (
+            <SectionList sections={sections} onPlace={openBoxEditor}
+                         onEdit={(section) => { setNotice(null); setPanel({ mode: 'edit', section }); }} />
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function SectionList({ sections, onPlace }) {
+function SectionList({ sections, onPlace, onEdit }) {
   if (sections.length === 0) {
     return (
       <div className="card empty-state">
@@ -154,7 +168,11 @@ function SectionList({ sections, onPlace }) {
               <td className="num" title={`${section.rowCount} filas × ${section.seatsPerRow}`}>
                 {section.capacity} <span className="muted small">({section.rowCount}×{section.seatsPerRow})</span>
               </td>
-              <td>
+              <td className="row-actions">
+                <button type="button" className="btn btn-small" onClick={() => onEdit(section)}
+                        aria-label={`Editar ${section.name}`}>
+                  Editar
+                </button>
                 <button type="button" className={`btn btn-small ${section.box ? '' : 'btn-solid'}`}
                         onClick={() => onPlace(section)}>
                   {section.box ? 'Mover' : 'Ubicar'}
