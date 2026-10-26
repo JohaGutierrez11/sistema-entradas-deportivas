@@ -163,12 +163,12 @@ export default function MatchDetailPage() {
             <p className="muted">
               {isAdmin ? 'El administrador no reserva entradas.'
                 : availability?.salesCloseAt && ['PROGRAMADO', 'EN_CURSO'].includes(match.status)
-                  ? `La venta online cerró el ${formatDateTime(availability.salesCloseAt)}.`
+                  ? `La venta online cerró el ${formatDateTime(availability.salesCloseAt)}`
                   : 'Este partido ya no admite reservas.'}
             </p>
           )}
           {salesOpen && availability?.salesCloseAt && (
-            <p className="muted small">Venta online hasta el {formatDateTime(availability.salesCloseAt)}.</p>
+            <p className="muted small">Venta online hasta el {formatDateTime(availability.salesCloseAt)}</p>
           )}
           <p className="muted small">La disponibilidad se actualiza cada {availability?.refreshSeconds ?? 5} s.</p>
         </aside>

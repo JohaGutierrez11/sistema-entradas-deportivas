@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import ChangePasswordPage from './pages/client/ChangePasswordPage';
 import MyReservationsPage from './pages/client/MyReservationsPage';
 import ReservationDetailPage from './pages/client/ReservationDetailPage';
+import AccessControlPage from './pages/admin/AccessControlPage';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import MatchesAdminPage from './pages/admin/MatchesAdminPage';
 import ReportsAdminPage from './pages/admin/ReportsAdminPage';
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/admin/usuarios" element={<UsersAdminPage />} />
           <Route path="/admin/reportes" element={<ReportsAdminPage />} />
           <Route path="/admin/configuracion" element={<SettingsAdminPage />} />
+          <Route path="/admin/control-acceso" element={<AccessControlPage />} />
         </Route>
       </Route>
 

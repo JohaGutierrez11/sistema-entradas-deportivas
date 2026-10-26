@@ -186,6 +186,7 @@ function MatchOccupancy({ item }) {
           <div className="report-total">
             <strong>{percentFormat.format(occupancy.percentage)} %</strong>
             <span className="muted small">{numberFormat.format(occupancy.occupied)} / {numberFormat.format(occupancy.capacity)}</span>
+            <span className="muted small">{numberFormat.format(occupancy.capacity - occupancy.occupied)} disponibles</span>
           </div>
         )}
       </div>
@@ -198,6 +199,7 @@ function MatchOccupancy({ item }) {
               <tr>
                 <th scope="col">Sección</th>
                 <th scope="col" className="num">Vendidos</th>
+                <th scope="col" className="num">Disponibles</th>
                 <th scope="col" className="bar-col">Ocupación</th>
                 <th scope="col" className="num">%</th>
               </tr>
@@ -207,6 +209,7 @@ function MatchOccupancy({ item }) {
                 <tr key={s.name}>
                   <td>{s.name}</td>
                   <td className="num">{numberFormat.format(s.occupied)} / {numberFormat.format(s.capacity)}</td>
+                  <td className="num">{numberFormat.format(s.capacity - s.occupied)}</td>
                   <td className="bar-col"><Bar percentage={s.percentage} /></td>
                   <td className="num">{percentFormat.format(s.percentage)}</td>
                 </tr>

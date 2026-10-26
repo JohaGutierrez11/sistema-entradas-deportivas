@@ -11,6 +11,7 @@ const MODULES = [
   { to: '/admin/partidos', title: 'Partidos', text: 'Programar, iniciar, finalizar o cancelar.' },
   { to: '/admin/usuarios', title: 'Usuarios y roles', text: 'Activar, desactivar y desbloquear cuentas.' },
   { to: '/admin/reportes', title: 'Reportes', text: 'Reservas, ocupación por sección y PDF.' },
+  { to: '/admin/control-acceso', title: 'Control de acceso', text: 'Validar el QR de las entradas en la puerta del escenario.' },
   { to: '/admin/configuracion', title: 'Configuración', text: 'Entradas por cliente, tiempo para confirmar y cierre de la venta.' },
 ];
 

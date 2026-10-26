@@ -45,6 +45,10 @@ export const reservationApi = {
 
   updateParameter: (code, value) => request(`${BASE}/parameters/${code}`, { method: 'PUT', body: { value } }),
 
+  /** Control de acceso (HU-47), solo ADMIN: valida el QR y, si es válido, marca la entrada como UTILIZADA. */
+  validateTicket: (qrCode, matchId) =>
+    request(`${BASE}/tickets/validate`, { method: 'POST', body: { qrCode, matchId } }),
+
   /** PDF con una página por entrada (Blob). */
   getTicketsPdf: (publicId) => request(`${BASE}/reservations/${publicId}/tickets/pdf`),
 };

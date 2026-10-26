@@ -31,6 +31,7 @@ export default function Navbar() {
               <NavLink to="/admin/partidos">Partidos</NavLink>
               <NavLink to="/admin/usuarios">Usuarios</NavLink>
               <NavLink to="/admin/reportes">Reportes</NavLink>
+              <NavLink to="/admin/control-acceso">Control de acceso</NavLink>
               <NavLink to="/admin/configuracion">Configuración</NavLink>
             </>
           )}

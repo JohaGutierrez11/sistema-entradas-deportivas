@@ -108,6 +108,7 @@ Credenciales **solo de desarrollo**. La lista completa y los escenarios preparad
 | Máquina de estados del partido | `PROGRAMADO → EN_CURSO → FINALIZADO` y `PROGRAMADO → CANCELADO`; los estados finales no cambian. Cada minuto una tarea inicia los partidos a su hora y los finaliza a las 2 horas (`app.match.duration-minutes`); el admin puede adelantarse |
 | Cancelación de una reserva confirmada | Hasta 24 horas antes del inicio (`CANCEL_DEADLINE_HOURS`, configurable); el administrador no tiene ese límite |
 | Partido cancelado | Una tarea programada cancela sus reservas y anula sus entradas en menos de un minuto |
+| Control de acceso | El QR de cada entrada se valida una sola vez en la puerta (bloqueo pesimista); queda UTILIZADA y cada lectura se audita |
 | Bloqueo por fuerza bruta | 5 intentos fallidos → BLOQUEADO 15 minutos |
 | Un cliente solo ve sus reservas | El id del cliente sale del token, nunca del body; una reserva ajena responde 404 (anti-IDOR) |
 | Nombres únicos sin importar tildes ni mayúsculas | Índice único sobre `name_key(name)` (`unaccent`) |
