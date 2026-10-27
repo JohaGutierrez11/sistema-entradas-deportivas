@@ -45,8 +45,9 @@ cd database
 .\setup-db.ps1
 
 # 2. Correo de desarrollo (las contraseñas temporales del registro llegan aquí)
-docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit
+docker run -d --name mailpit -p 2525:1025 -p 8025:8025 axllent/mailpit
 #    Bandeja: http://localhost:8025
+#    SMTP en el puerto 2525 del equipo (el 1025 puede estar reservado por Windows)
 
 # 3. Microservicios: uno por terminal, en este orden
 cd backend\auth-service;        .\mvnw spring-boot:run

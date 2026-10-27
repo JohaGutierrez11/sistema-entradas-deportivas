@@ -1,0 +1,25 @@
+flowchart LR
+  U(["Navegador<br/>Cliente / Administrador"])
+  subgraph FE["Frontend · React 19 + Vite :5173"]
+    SPA["SPA<br/>proxy de desarrollo"]
+  end
+  subgraph MS["Microservicios · Spring Boot 4 · Java 17"]
+    A["auth-service :8081<br/>registro, login, JWT,<br/>usuarios y roles"]
+    M["match-service :8082<br/>escenarios, secciones,<br/>asientos y partidos<br/><i>tarea: estado del partido</i>"]
+    R["reservation-service :8083<br/>reservas, tickets QR, PDF,<br/>reportes, parámetros<br/><i>tareas: vencimiento y<br/>partidos cancelados</i>"]
+  end
+  subgraph DB["PostgreSQL 16 · Docker :5433"]
+    DA[("auth_db")]
+    DM[("match_db")]
+    DR[("reservation_db")]
+  end
+  MP["Mailpit<br/>SMTP de pruebas"]
+  U --> SPA
+  SPA -- "REST + JWT" --> A
+  SPA -- "REST + JWT" --> M
+  SPA -- "REST + JWT" --> R
+  R -- "REST interno<br/>X-Internal-Key" --> M
+  A --> DA
+  M --> DM
+  R --> DR
+  A -- "correo de<br/>primer acceso" --> MP
