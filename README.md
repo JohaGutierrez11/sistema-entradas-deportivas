@@ -136,13 +136,11 @@ Las reglas viven en el backend. Cuando el front las repite (por ejemplo, el plan
 
 ## Uso de inteligencia artificial
 
-> ✏️ **Joha: esta sección es un borrador. Revísala y reescríbela con tus palabras antes de entregar; tiene que describir exactamente cómo trabajaste.**
-
 Durante el desarrollo usé **Claude (Anthropic)** como asistente técnico. Lo usé para:
 
 - Explicar conceptos y comparar alternativas de diseño antes de implementar (transacciones y llamadas remotas, bloqueo pesimista, máquina de estados, manejo de errores, seguridad).
 - Proponer y generar parte del código y de los scripts SQL, que integré, probé y corregí.
-- Revisar los pull requests y redactar borradores de la documentación (contratos OpenAPI, resúmenes de sprint, este README).
+- Redactar borradores de la documentación (contratos OpenAPI, resúmenes de sprint, este README).
 
 Lo que hice yo:
 
