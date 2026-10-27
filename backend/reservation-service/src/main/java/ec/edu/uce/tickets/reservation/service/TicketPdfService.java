@@ -2,6 +2,7 @@ package ec.edu.uce.tickets.reservation.service;
 
 import ec.edu.uce.tickets.reservation.audit.AuditAction;
 import ec.edu.uce.tickets.reservation.audit.AuditService;
+import ec.edu.uce.tickets.reservation.client.SeatLabel;
 import ec.edu.uce.tickets.reservation.dto.MatchSummary;
 import ec.edu.uce.tickets.reservation.dto.PdfFile;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /** Entradas de una reserva en PDF (HU-37). SIN transacción: pide datos a match-service. */
@@ -45,7 +47,9 @@ public class TicketPdfService {
         }
 
         MatchSummary match = matchLookup.findOrNull(reservation.matchId());
-        PdfFile file = new PdfFile("entradas-" + reservation.code() + ".pdf", ticketsPdf.build(reservation, match, active));
+        Map<Long, SeatLabel> seats = matchLookup.seatLabelsOrEmpty(active.stream().map(TicketResponse::seatId).toList());
+        PdfFile file = new PdfFile("entradas-" + reservation.code() + ".pdf",
+                ticketsPdf.build(reservation, match, seats, active));
         auditService.success(AuditAction.ENTRADAS_DESCARGADAS, "RESERVA", reservation.code(),
                 active.size() + " entradas" + (admin ? " (descargadas por un administrador)" : ""));
         return file;

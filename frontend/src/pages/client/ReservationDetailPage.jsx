@@ -93,7 +93,7 @@ export default function ReservationDetailPage() {
         <div>
           <h1>Reserva {reservation.code}</h1>
           {match && (
-            <p className="match-when capitalize">
+            <p className="match-when">
               {match.name} · {formatMatchDate(match.matchDate)} · {match.matchTime} · {match.stadium.name}
             </p>
           )}
@@ -152,6 +152,7 @@ export default function ReservationDetailPage() {
                   ? <TicketQr ticketPublicId={ticket.publicId} label={label(ticket.seatId)} />
                   : <div className="qr-placeholder void">{ticket.status}</div>}
                 <p className="ticket-seat">{label(ticket.seatId)}</p>
+                {ticket.status === 'ACTIVO' && <code className="ticket-code" title="Código del QR">{ticket.qrCode}</code>}
               </article>
             ))}
           </div>

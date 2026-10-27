@@ -29,4 +29,8 @@ public class Stadium {
     @Column(name = "total_capacity", nullable = false)
     private Integer totalCapacity;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "venue_type", nullable = false, length = 10)
+    private VenueType venueType = VenueType.ESTADIO;
+
 }

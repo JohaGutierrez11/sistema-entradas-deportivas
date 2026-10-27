@@ -59,6 +59,12 @@ public class InternalSeatService {
                 match.getMatchDate(), match.getMatchTime(), stadiumId, valid, invalid);
     }
 
+    /** Los ids que no existen simplemente no aparecen en la respuesta. */
+    @Transactional(readOnly = true)
+    public List<SeatLabelResponse> labels(SeatLabelsRequest request) {
+        return seatRepository.findLabels(request.seatIds());
+    }
+
     @Transactional(readOnly = true)
     public MatchOccupancyResponse occupancy(Long matchId, OccupancyRequest request) {
         SportMatch match = matchRepository.findById(matchId)

@@ -97,9 +97,9 @@ export default function MatchesAdminPage() {
           ))}
         </div>
         <label className="toolbar-filter">
-          <span className="sr-only">Estadio</span>
+          <span className="sr-only">Escenario</span>
           <select value={stadiumId} onChange={(e) => setStadiumId(e.target.value)}>
-            <option value="">Todos los estadios</option>
+            <option value="">Todos los escenarios</option>
             {stadiums.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </label>
@@ -116,7 +116,7 @@ export default function MatchesAdminPage() {
               <tr>
                 <th scope="col">Partido</th>
                 <th scope="col">Fecha</th>
-                <th scope="col">Estadio</th>
+                <th scope="col">Escenario</th>
                 <th scope="col">Estado</th>
                 <th scope="col"><span className="sr-only">Acciones</span></th>
               </tr>
@@ -154,7 +154,10 @@ function MatchActions({ match, busy, confirming, onEdit, onAsk, onCancelAsk, onC
     const action = TRANSITION_ACTIONS[confirming.next];
     return (
       <div className="row-actions">
-        <span className="small">¿{action.label}? No se puede deshacer.</span>
+        <span className="small">
+          ¿{action.label}? No se puede deshacer.
+          {confirming.next === 'CANCELADO' && ' Se cancelarán sus reservas y se anularán las entradas vendidas.'}
+        </span>
         <button type="button" className="btn btn-small btn-danger" disabled={busy}
                 onClick={() => onChange(confirming.next)}>Sí</button>
         <button type="button" className="btn btn-small" disabled={busy} onClick={onCancelAsk}>No</button>

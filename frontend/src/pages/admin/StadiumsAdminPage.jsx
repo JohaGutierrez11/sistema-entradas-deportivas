@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { matchApi } from '../../api/matchApi';
 import StadiumForm from '../../components/admin/StadiumForm';
+import { venueTypeLabel } from '../../utils/stadiumPlan';
 
 const numberFormat = new Intl.NumberFormat('es-EC');
 
-/** Estadios (HU-28): listar, crear, editar y eliminar. Las secciones se gestionan en el detalle. */
+/** Escenarios deportivos, estadios y coliseos (HU-28, HU-42): listar, crear, editar y eliminar. Las secciones se gestionan en el detalle. */
 export default function StadiumsAdminPage() {
   const [stadiums, setStadiums] = useState(null);
   const [error, setError] = useState(null);
@@ -39,7 +40,7 @@ export default function StadiumsAdminPage() {
     setDeleting(true);
     try {
       await matchApi.deleteStadium(stadium.id);
-      setNotice(`Se eliminó el estadio ${stadium.name}.`);
+      setNotice(`Se eliminó ${stadium.name}.`);
       load();
     } catch (err) {
       setError(err.message);   // 409: tiene secciones o partidos asociados
@@ -53,11 +54,11 @@ export default function StadiumsAdminPage() {
     <section>
       <div className="page-header page-header-row">
         <div>
-          <h1>Estadios</h1>
-          <p className="muted">Crea los estadios y luego arma sus secciones y su plano.</p>
+          <h1>Escenarios</h1>
+          <p className="muted">Estadios y coliseos: créalos y luego arma sus secciones y su plano.</p>
         </div>
         {!editing && (
-          <button type="button" className="btn btn-solid" onClick={() => startEditing('new')}>Nuevo estadio</button>
+          <button type="button" className="btn btn-solid" onClick={() => startEditing('new')}>Nuevo escenario</button>
         )}
       </div>
 
@@ -70,11 +71,11 @@ export default function StadiumsAdminPage() {
                      onSaved={handleSaved} onCancel={() => setEditing(null)} />
       )}
 
-      {stadiums === null && !error && <p className="muted">Cargando estadios…</p>}
+      {stadiums === null && !error && <p className="muted">Cargando escenarios…</p>}
 
       {stadiums?.length === 0 && (
         <div className="card empty-state">
-          <p><strong>Todavía no hay estadios.</strong></p>
+          <p><strong>Todavía no hay escenarios.</strong></p>
           <p className="muted">Crea el primero para poder programar partidos.</p>
         </div>
       )}
@@ -85,6 +86,7 @@ export default function StadiumsAdminPage() {
             <thead>
               <tr>
                 <th scope="col">Nombre</th>
+                <th scope="col">Tipo</th>
                 <th scope="col">Ubicación</th>
                 <th scope="col" className="num">Capacidad</th>
                 <th scope="col"><span className="sr-only">Acciones</span></th>
@@ -94,6 +96,7 @@ export default function StadiumsAdminPage() {
               {stadiums.map((stadium) => (
                 <tr key={stadium.id}>
                   <td><strong>{stadium.name}</strong></td>
+                  <td>{venueTypeLabel(stadium.venueType)}</td>
                   <td>{stadium.location}</td>
                   <td className="num">{numberFormat.format(stadium.totalCapacity)}</td>
                   <td>

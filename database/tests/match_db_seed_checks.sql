@@ -14,6 +14,11 @@ SELECT pg_temp.expect_true('seat_row tiene al menos 5 registros',    $$SELECT CO
 SELECT pg_temp.expect_true('seat tiene al menos 5 registros',        $$SELECT COUNT(*) >= 5 FROM seat$$);
 SELECT pg_temp.expect_true('sport_match tiene al menos 5 registros', $$SELECT COUNT(*) >= 5 FROM sport_match$$);
 
+SELECT pg_temp.expect_true('Hay escenarios de los dos tipos (estadio y coliseo)',
+  $$SELECT COUNT(DISTINCT venue_type) = 2 FROM stadium$$);
+SELECT pg_temp.expect_true('El coliseo tiene un partido programado',
+  $$SELECT EXISTS (SELECT 1 FROM sport_match m JOIN stadium s ON s.id = m.stadium_id
+                   WHERE s.venue_type = 'COLISEO' AND m.status = 'PROGRAMADO')$$);
 SELECT pg_temp.expect_true('Los 4 tipos de sección están presentes',
   $$SELECT COUNT(DISTINCT section_type) = 4 FROM section$$);
 SELECT pg_temp.expect_true('Cada sección tiene tantas filas como row_count',

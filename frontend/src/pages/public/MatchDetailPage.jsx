@@ -10,7 +10,7 @@ import { usePolling } from '../../hooks/usePolling';
 import { formatDateTime, formatMatchDate } from '../../utils/format';
 import { buildSeatIndex, seatLabel } from '../../utils/seats';
 
-const MAX_SEATS = 6;   // comodidad del front; la regla real (con tus otras reservas) la aplica el backend
+const DEFAULT_MAX_SEATS = 6;   // hasta que llegue la disponibilidad; la regla real la aplica el backend
 
 export default function MatchDetailPage() {
   const { matchId } = useParams();
@@ -26,6 +26,8 @@ export default function MatchDetailPage() {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [reserving, setReserving] = useState(false);
+  // El máximo es el parámetro MAX_TICKETS_PER_MATCH que el admin configura (HU-43)
+  const maxSeats = availability?.maxTicketsPerMatch ?? DEFAULT_MAX_SEATS;
 
   // 1. La estructura, UNA vez: el partido y el plano de su estadio
   useEffect(() => {
@@ -77,8 +79,8 @@ export default function MatchDetailPage() {
     setNotice(null);
     if (selectedSeats.includes(seatId)) {
       setSelectedSeats(selectedSeats.filter((id) => id !== seatId));
-    } else if (selectedSeats.length >= MAX_SEATS) {
-      setNotice(`Puedes elegir hasta ${MAX_SEATS} asientos por partido.`);
+    } else if (selectedSeats.length >= maxSeats) {
+      setNotice(`Puedes elegir hasta ${maxSeats} asientos por partido.`);
     } else {
       setSelectedSeats([...selectedSeats, seatId]);
     }
@@ -117,7 +119,7 @@ export default function MatchDetailPage() {
       <div className="match-header">
         <div>
           <h1>{match.name}</h1>
-          <p className="match-when capitalize">
+          <p className="match-when">
             {formatMatchDate(match.matchDate)} · {match.matchTime} · {match.stadium.name}
           </p>
         </div>
@@ -149,7 +151,7 @@ export default function MatchDetailPage() {
               ))}
             </ul>
           )}
-          <p className="muted">{selectedSeats.length} de {MAX_SEATS} asientos</p>
+          <p className="muted">{selectedSeats.length} de {maxSeats} asientos</p>
 
           {canReserve ? (
             <button type="button" className="btn btn-primary" disabled={selectedSeats.length === 0 || reserving}
@@ -161,12 +163,12 @@ export default function MatchDetailPage() {
             <p className="muted">
               {isAdmin ? 'El administrador no reserva entradas.'
                 : availability?.salesCloseAt && ['PROGRAMADO', 'EN_CURSO'].includes(match.status)
-                  ? `La venta online cerró el ${formatDateTime(availability.salesCloseAt)}.`
+                  ? `La venta online cerró el ${formatDateTime(availability.salesCloseAt)}`
                   : 'Este partido ya no admite reservas.'}
             </p>
           )}
           {salesOpen && availability?.salesCloseAt && (
-            <p className="muted small">Venta online hasta el {formatDateTime(availability.salesCloseAt)}.</p>
+            <p className="muted small">Venta online hasta el {formatDateTime(availability.salesCloseAt)}</p>
           )}
           <p className="muted small">La disponibilidad se actualiza cada {availability?.refreshSeconds ?? 5} s.</p>
         </aside>

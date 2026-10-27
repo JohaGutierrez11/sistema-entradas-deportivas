@@ -2,6 +2,7 @@ package ec.edu.uce.tickets.reservation.service;
 
 import ec.edu.uce.tickets.reservation.client.MatchOccupancy;
 import ec.edu.uce.tickets.reservation.client.MatchServiceClient;
+import ec.edu.uce.tickets.reservation.client.SeatLabel;
 import ec.edu.uce.tickets.reservation.dto.MatchSummary;
 import ec.edu.uce.tickets.reservation.exception.ResourceNotFoundException;
 import ec.edu.uce.tickets.reservation.exception.ServiceUnavailableException;
@@ -9,6 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** Datos del partido para mostrar (historial, entradas). Si match-service no responde, devuelve null. */
 @Slf4j
@@ -28,6 +32,17 @@ public class MatchLookup {
         } catch (ServiceUnavailableException | ResourceNotFoundException e) {
             log.warn("Sin datos del partido {}: {}", matchId, e.getMessage());
             return null;
+        }
+    }
+
+    /** seatId → nombre legible. Si match-service no responde, mapa vacío (la entrada muestra el id). */
+    public Map<Long, SeatLabel> seatLabelsOrEmpty(List<Long> seatIds) {
+        try {
+            return matchServiceClient.getSeatLabels(seatIds).stream()
+                    .collect(Collectors.toMap(SeatLabel::seatId, Function.identity()));
+        } catch (ServiceUnavailableException e) {
+            log.warn("Sin nombres de asientos: {}", e.getMessage());
+            return Map.of();
         }
     }
 

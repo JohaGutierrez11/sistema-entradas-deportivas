@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { adminAuthApi } from '../../api/adminAuthApi';
 import { matchApi } from '../../api/matchApi';
 import { reservationApi } from '../../api/reservationApi';
 import StatusBadge from '../../components/StatusBadge';
@@ -185,6 +186,7 @@ function MatchOccupancy({ item }) {
           <div className="report-total">
             <strong>{percentFormat.format(occupancy.percentage)} %</strong>
             <span className="muted small">{numberFormat.format(occupancy.occupied)} / {numberFormat.format(occupancy.capacity)}</span>
+            <span className="muted small">{numberFormat.format(occupancy.capacity - occupancy.occupied)} disponibles</span>
           </div>
         )}
       </div>
@@ -197,6 +199,7 @@ function MatchOccupancy({ item }) {
               <tr>
                 <th scope="col">Sección</th>
                 <th scope="col" className="num">Vendidos</th>
+                <th scope="col" className="num">Disponibles</th>
                 <th scope="col" className="bar-col">Ocupación</th>
                 <th scope="col" className="num">%</th>
               </tr>
@@ -206,6 +209,7 @@ function MatchOccupancy({ item }) {
                 <tr key={s.name}>
                   <td>{s.name}</td>
                   <td className="num">{numberFormat.format(s.occupied)} / {numberFormat.format(s.capacity)}</td>
+                  <td className="num">{numberFormat.format(s.capacity - s.occupied)}</td>
                   <td className="bar-col"><Bar percentage={s.percentage} /></td>
                   <td className="num">{percentFormat.format(s.percentage)}</td>
                 </tr>
@@ -236,6 +240,17 @@ function MatchReservations({ matchId, status }) {
     reservationApi.getMatchReservations(matchId, status).then(setItems).catch((err) => setError(err.message));
   }, [matchId, status]);
   useEffect(load, [load]);
+
+  // Composición en el cliente (HU-44): las reservas vienen de reservation-service y los nombres de
+  // auth-service. Una sola petición con todos los ids; si auth-service no responde, se muestra el id.
+  const [clients, setClients] = useState(new Map());
+  useEffect(() => {
+    const ids = [...new Set((items ?? []).map((item) => item.clientId))];
+    if (ids.length === 0) return;
+    adminAuthApi.getClients(ids)
+      .then((list) => setClients(new Map(list.map((c) => [c.id, c]))))
+      .catch(() => setClients(new Map()));
+  }, [items]);
 
   // Nombres de los asientos ("Palco Occidental · Fila A · Asiento 3"): del plano del estadio del partido
   useEffect(() => {
@@ -291,7 +306,17 @@ function MatchReservations({ matchId, status }) {
                 return (
                   <tr key={r.publicId}>
                     <td className="nowrap"><strong>{r.code}</strong></td>
-                    <td>Cliente #{clientId}</td>
+                    <td>
+                      {clients.has(clientId) ? (
+                        <>
+                          <strong>{clients.get(clientId).fullName}</strong>
+                          <div className="muted small">
+                            {clients.get(clientId).username} · C.I. ****{clients.get(clientId).cedulaLast4}
+                          </div>
+                          <div className="muted small">{clients.get(clientId).email}</div>
+                        </>
+                      ) : `Cliente #${clientId}`}
+                    </td>
                     <td>
                       {seats.length === 0 ? <span className="muted">—</span> : (
                         <ul className="seat-names">{seats.map((id) => <li key={id}>{label(id)}</li>)}</ul>

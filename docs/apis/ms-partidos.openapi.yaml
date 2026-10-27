@@ -271,9 +271,8 @@ paths:
       tags: [Secciones]
       summary: Editar nombre y descripción de una sección
       description: |
-        > **Pendiente: todavía no implementado** (diseñado en HU-07).
-
-        Solo ADMIN. Por seguridad no se pueden cambiar las filas ni los asientos de una
+        Solo ADMIN. El nombre no puede repetirse dentro del estadio (se compara sin tildes,
+        mayúsculas ni espacios repetidos → `409`). Por seguridad no se pueden cambiar las filas ni los asientos de una
         sección existente: podrían tener entradas vendidas. Para otra distribución,
         se elimina la sección y se crea una nueva.
       operationId: updateSection
@@ -463,6 +462,9 @@ paths:
         Solo ADMIN. Transiciones de estado permitidas:
         `PROGRAMADO → EN_CURSO → FINALIZADO` y `PROGRAMADO → CANCELADO`.
         Cualquier otra (por ejemplo, reabrir un partido FINALIZADO o CANCELADO) → `422`.
+        **Automático:** cada minuto, match-service pasa a `EN_CURSO` los programados cuya hora de inicio
+        llegó, y a `FINALIZADO` los que llevan `app.match.duration-minutes` (120) en curso. El admin puede
+        adelantarse (iniciar o finalizar antes); `CANCELADO` nunca cambia solo.
         No se eliminan partidos: se cancelan, para conservar el historial de reservas.
       operationId: updateMatch
       requestBody:
@@ -533,6 +535,43 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /match-api/v1/internal/seats/labels:
+    post:
+      tags: [Interno]
+      summary: Nombre legible de asientos
+      description: |
+        Lo llama **ms-reservas** al generar el PDF de entradas, para imprimir
+        "Sección · Fila · Asiento" en lugar del id técnico. Los ids que no existen no aparecen.
+      operationId: seatLabels
+      security: []
+      parameters:
+        - name: X-Internal-Key
+          in: header
+          required: true
+          description: Clave compartida entre microservicios. Si falta o no coincide → `401`.
+          schema: { type: string, example: dev-internal-key-cambiar-en-produccion }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeatLabelsRequest' }
+            example: { seatIds: [14881, 14882] }
+      responses:
+        '200':
+          description: Nombre de cada asiento encontrado
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SeatLabel' }
+              example: [{ seatId: 14881, sectionName: Tribuna, rowLetter: C, seatNumber: 12 }]
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Falta el encabezado X-Internal-Key o no es válido
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
 components:
   securitySchemes:
@@ -620,6 +659,10 @@ components:
               message: { type: string, example: no debe estar vacío }
 
     # --------------------------------------------------------------- Estadios
+    VenueType:
+      type: string
+      enum: [ESTADIO, COLISEO]
+      description: Tipo de escenario del enunciado ("escenario (estadio/coliseo)"). Solo cambia el dibujo del centro del plano.
     StadiumRequest:
       type: object
       required: [name, location, totalCapacity]
@@ -628,6 +671,9 @@ components:
         description: { type: string, maxLength: 250, example: Escenario principal de Quito }
         location: { type: string, minLength: 3, maxLength: 200, example: 'Av. 6 de Diciembre y Naciones Unidas, Quito' }
         totalCapacity: { type: integer, minimum: 1, maximum: 200000, example: 35000 }
+        venueType:
+          $ref: '#/components/schemas/VenueType'
+          description: Opcional. Si no se envía, se crea como ESTADIO; al editar se conserva el tipo actual (HU-42)
     StadiumResponse:
       type: object
       properties:
@@ -636,6 +682,7 @@ components:
         description: { type: string, example: Escenario principal de Quito }
         location: { type: string, example: 'Av. 6 de Diciembre y Naciones Unidas, Quito' }
         totalCapacity: { type: integer, example: 35000 }
+        venueType: { $ref: '#/components/schemas/VenueType' }
 
     # --------------------------------------------------------------- Secciones
     SectionType:
@@ -701,6 +748,7 @@ components:
       properties:
         stadiumId: { type: integer, format: int64 }
         stadiumName: { type: string }
+        venueType: { $ref: '#/components/schemas/VenueType' }
         field:
           allOf: [ { $ref: '#/components/schemas/SectionBox' } ]
           description: Recuadro de la cancha (fijo), en % del plano
@@ -784,6 +832,23 @@ components:
           uniqueItems: true
           items: { type: integer, format: int64, minimum: 1 }
           example: [35, 36, 37]
+    SeatLabelsRequest:
+      type: object
+      required: [seatIds]
+      properties:
+        seatIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: integer, format: int64 }
+    SeatLabel:
+      type: object
+      properties:
+        seatId: { type: integer, format: int64 }
+        sectionName: { type: string }
+        rowLetter: { type: string }
+        seatNumber: { type: integer }
     SeatValidationResponse:
       type: object
       properties:

@@ -8,6 +8,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Collection;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -55,6 +56,21 @@ public class MatchServiceClient {
             throw ex;
         } catch (RestClientException ex) {
             log.warn("Fallo al validar asientos del partido {} en match-service: {}", matchId, ex.getMessage());
+            throw new ServiceUnavailableException(UNAVAILABLE);
+        }
+    }
+
+    /** Sección, fila y número de los asientos (endpoint interno). 503 si match-service no responde. */
+    public List<SeatLabel> getSeatLabels(Collection<Long> seatIds) {
+        try {
+            SeatLabel[] labels = restClient.post()
+                    .uri("/match-api/v1/internal/seats/labels")
+                    .body(new SeatLabelsRequest(seatIds))
+                    .retrieve()
+                    .body(SeatLabel[].class);
+            return labels == null ? List.of() : List.of(labels);
+        } catch (RestClientException ex) {
+            log.warn("Fallo al consultar los nombres de asientos en match-service: {}", ex.getMessage());
             throw new ServiceUnavailableException(UNAVAILABLE);
         }
     }

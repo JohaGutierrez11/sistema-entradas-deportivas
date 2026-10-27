@@ -33,6 +33,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/reservation-api/v1/reservations/*/cancel").hasAnyRole(CLIENTE, ADMIN)
                         .requestMatchers("/reservation-api/v1/reservations/me", "/reservation-api/v1/reservations/me/**").hasRole(CLIENTE)
                         .requestMatchers("/reservation-api/v1/reports/**").hasRole(ADMIN)
+                        .requestMatchers("/reservation-api/v1/parameters", "/reservation-api/v1/parameters/**").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/reservation-api/v1/tickets/validate").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/reservation-api/v1/matches/*/availability").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

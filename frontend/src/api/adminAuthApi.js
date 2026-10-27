@@ -10,6 +10,9 @@ export const adminAuthApi = {
 
   listRoles: () => request('/auth-api/v1/roles'),
 
+  /** Nombre, usuario, correo y últimos 4 de la cédula de varios clientes en UNA petición (HU-44). */
+  getClients: (ids) => request('/auth-api/v1/clients', { query: { ids: ids.join(',') } }),
+
   updateRoleStatus: (roleId, status) =>
     request(`/auth-api/v1/roles/${roleId}/status`, { method: 'PATCH', body: { status } }),
 };

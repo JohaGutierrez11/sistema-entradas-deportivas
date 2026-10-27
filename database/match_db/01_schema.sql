@@ -32,7 +32,9 @@ CREATE OR REPLACE FUNCTION name_key(p_name TEXT) RETURNS TEXT
 $$ SELECT lower(public.unaccent('public.unaccent'::regdictionary, regexp_replace(btrim(p_name), '\s+', ' ', 'g'))) $$;
 
 -- ---------------------------------------------------------------------
--- stadium: escenario deportivo
+-- stadium: escenario deportivo (estadio o coliseo, según el enunciado).
+-- La tabla conserva el nombre "stadium"; venue_type dice qué tipo de
+-- escenario es y solo cambia cómo se dibuja el centro del plano.
 -- ---------------------------------------------------------------------
 CREATE TABLE stadium (
     id             BIGSERIAL    NOT NULL,
@@ -40,9 +42,11 @@ CREATE TABLE stadium (
     description    VARCHAR(250),
     location       VARCHAR(200) NOT NULL,
     total_capacity INT          NOT NULL,
+    venue_type     VARCHAR(10)  NOT NULL DEFAULT 'ESTADIO',
 
-    CONSTRAINT pk_stadium          PRIMARY KEY (id),
-    CONSTRAINT ck_stadium_capacity CHECK (total_capacity > 0)
+    CONSTRAINT pk_stadium            PRIMARY KEY (id),
+    CONSTRAINT ck_stadium_capacity   CHECK (total_capacity > 0),
+    CONSTRAINT ck_stadium_venue_type CHECK (venue_type IN ('ESTADIO', 'COLISEO'))
 );
 
 -- Unicidad sin tildes, mayúsculas ni espacios de más (un UNIQUE (name) dejaba pasar

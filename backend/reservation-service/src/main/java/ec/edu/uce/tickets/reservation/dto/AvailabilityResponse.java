@@ -11,7 +11,8 @@ public record AvailabilityResponse(
         boolean salesOpen,
         LocalDateTime salesCloseAt,
         List<OccupiedSeat> occupiedSeats,
-        int refreshSeconds
+        int refreshSeconds,
+        int maxTicketsPerMatch
 ) {
     public record OccupiedSeat(Long seatId, SeatLockStatus status) {
     }

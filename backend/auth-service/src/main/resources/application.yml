@@ -20,7 +20,7 @@ spring:
     locale-resolver: fixed
   mail:
     host: localhost
-    port: 1025
+    port: 2525
 
 springdoc:
   swagger-ui:

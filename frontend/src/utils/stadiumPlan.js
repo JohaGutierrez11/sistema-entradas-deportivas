@@ -6,6 +6,13 @@
 /** La cancha fija del backend (SectionBox.FIELD), en % del plano. */
 export const FIELD_BOX = { x: 28, y: 25, width: 44, height: 50 };
 
+/** Tipos de escenario del enunciado: "escenario (estadio/coliseo)" (HU-42). */
+export const VENUE_TYPES = [
+  { value: 'ESTADIO', label: 'Estadio' },
+  { value: 'COLISEO', label: 'Coliseo' },
+];
+export const venueTypeLabel = (value) => VENUE_TYPES.find((t) => t.value === value)?.label ?? 'Estadio';
+
 export const SECTION_TYPES = [
   { value: 'PALCOS', label: 'Palcos' },
   { value: 'PREFERENCIA', label: 'Preferencia' },

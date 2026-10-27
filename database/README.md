@@ -11,14 +11,14 @@ database/
 │   └── 02_seed.sql                5 roles, 8 usuarios, 7 clientes
 ├── match_db/
 │   ├── 01_schema.sql              ms-partidos: stadium, section, seat_row, seat, sport_match
-│   └── 02_seed.sql                5 estadios, 20 secciones, 65 filas, 610 asientos, 6 partidos
+│   └── 02_seed.sql                5 estadios y 1 coliseo, 41 secciones, 813 filas, 44 440 asientos, 7 partidos
 ├── reservation_db/
 │   ├── 01_schema.sql              ms-reservas: parameter, reservation, seat_lock, ticket
-│   └── 02_seed.sql                5 parámetros, 7 reservas, 17 bloqueos, 16 tickets
+│   └── 02_seed.sql                6 parámetros, 7 reservas, 17 bloqueos, 16 tickets
 └── tests/
     ├── 00_test_helpers.sql        expect_ok / expect_violation / expect_true / report
-    ├── *_tests.sql                70 pruebas de restricciones (intentan romper cada regla)
-    └── *_seed_checks.sql          36 verificaciones de que las semillas cumplen las reglas de negocio
+    ├── *_tests.sql                80 pruebas de restricciones (intentan romper cada regla)
+    └── *_seed_checks.sql          40 verificaciones de que las semillas cumplen las reglas de negocio
 ```
 
 El modelo y sus decisiones de diseño están en [`docs/modelo-er`](../docs/modelo-er/README.md).
@@ -32,13 +32,13 @@ cd database
 .\setup-db.ps1
 ```
 
-El script crea el contenedor `pg-entradas` (PostgreSQL 16 en el puerto **5433**), crea las tres bases, las tablas, carga las semillas y corre las 106 pruebas. Se puede ejecutar todas las veces que haga falta: recarga los datos desde cero.
+El script crea el contenedor `pg-entradas` (PostgreSQL 16 en el puerto **5433**), crea las tres bases, las tablas, carga las semillas y corre las 120 pruebas. Se puede ejecutar todas las veces que haga falta: recarga los datos desde cero.
 
 Al final muestra un total general:
 
 ```
 ================================================
- TOTAL: 106 casos · 106 PASS · 0 FAIL
+ TOTAL: 120 casos · 120 PASS · 0 FAIL
 ================================================
 ```
 
@@ -128,7 +128,7 @@ Las semillas no son datos al azar: cada registro existe para demostrar o probar 
 
 ### Ids estables entre microservicios
 
-Las referencias lógicas de `reservation_db` (`client_id`, `match_id`, `seat_id`) apuntan a ids de las otras bases. Por eso las semillas reinician los ids (`TRUNCATE ... RESTART IDENTITY`) y siempre producen los mismos valores. El mapa de asientos está en el encabezado de `match_db/02_seed.sql`: cada estadio tiene 7 localidades y 8 460 asientos, y el estadio N ocupa los `seat.id` desde `(N-1)*8460 + 1`.
+Las referencias lógicas de `reservation_db` (`client_id`, `match_id`, `seat_id`) apuntan a ids de las otras bases. Por eso las semillas reinician los ids (`TRUNCATE ... RESTART IDENTITY`) y siempre producen los mismos valores. El mapa de asientos está en el encabezado de `match_db/02_seed.sql`: cada estadio tiene 7 localidades y 8 460 asientos, y el estadio N ocupa los `seat.id` desde `(N-1)*8460 + 1`. El coliseo (escenario 6, 6 localidades, 2 140 asientos) va después: `seat.id` 42 301 a 44 440.
 
 Después de insertar ids explícitos, cada semilla mueve la secuencia al último id (`setval`). Sin eso, el primer registro creado por la aplicación intentaría usar `id = 1` y fallaría con *duplicate key*.
 
@@ -154,8 +154,8 @@ Nombrar las restricciones permite que el error diga exactamente qué regla se vi
 
 | Tipo | Qué verifica | Casos |
 |---|---|---|
-| Restricciones (`*_tests.sql`) | Cada regla rechaza lo que debe rechazar, con la restricción exacta | 70 |
-| Semillas (`*_seed_checks.sql`) | Mínimo 5 registros por tabla y coherencia con las reglas de negocio (capacidades, máximo de entradas, estados de reservas y de cuentas) | 36 |
+| Restricciones (`*_tests.sql`) | Cada regla rechaza lo que debe rechazar, con la restricción exacta | 80 |
+| Semillas (`*_seed_checks.sql`) | Mínimo 5 registros por tabla y coherencia con las reglas de negocio (capacidades, máximo de entradas, estados de reservas y de cuentas) | 40 |
 
 Las pruebas corren dentro de una transacción que termina en `ROLLBACK`: no modifican los datos. Si algún caso falla, `psql` termina con error y `setup-db.ps1` se detiene.
 

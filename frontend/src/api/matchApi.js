@@ -31,6 +31,10 @@ export const matchApi = {
   createSection: (stadiumId, section) =>
     request(`/match-api/v1/stadiums/${stadiumId}/sections`, { method: 'POST', body: section }),
 
+  /** Edita el nombre y la descripción de una sección (las filas y asientos no cambian). */
+  updateSection: (sectionId, section) =>
+    request(`/match-api/v1/sections/${sectionId}`, { method: 'PUT', body: section }),
+
   /** Ubica o mueve la sección en el plano: { x, y, width, height } en % (HU-38). */
   updateSectionBox: (sectionId, box) =>
     request(`/match-api/v1/sections/${sectionId}/box`, { method: 'PUT', body: box }),

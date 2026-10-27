@@ -47,6 +47,7 @@ public class AvailabilityService {
                 salesWindow.isOpen(match.status(), match.matchDate(), match.matchTime()),
                 salesWindow.closeAt(match.matchDate(), match.matchTime()),
                 occupied,
-                parameterService.getInt("AVAILABILITY_REFRESH_SECONDS"));
+                parameterService.getInt("AVAILABILITY_REFRESH_SECONDS"),
+                parameterService.getInt("MAX_TICKETS_PER_MATCH"));   // el front ya no fija el 6 a mano
     }
 }

@@ -68,11 +68,11 @@ export default function MatchForm({ match, stadiums, onSaved, onCancel }) {
         {field('name', 'Nombre', { required: true, maxLength: 100, hint: 'Ej. Liga de Quito vs Emelec' })}
 
         <div className="field">
-          <label htmlFor="stadiumId">Estadio</label>
+          <label htmlFor="stadiumId">Escenario</label>
           <select id="stadiumId" name="stadiumId" value={form.stadiumId} onChange={handleChange}
                   disabled={editing} aria-invalid={fieldErrors.stadiumId ? 'true' : undefined}
                   aria-describedby="stadiumId-message">
-            <option value="">Elige un estadio</option>
+            <option value="">Elige un estadio o coliseo</option>
             {stadiums.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           {fieldErrors.stadiumId

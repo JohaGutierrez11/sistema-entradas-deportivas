@@ -7,10 +7,11 @@ const DATE_TIME = new Intl.DateTimeFormat('es-EC', {
   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Guayaquil',
 });
 
-/** "2026-11-07" → "sábado, 7 de noviembre" */
+/** "2026-11-07" → "Sábado, 7 de noviembre" (solo la primera letra: text-transform daría "7 De Noviembre") */
 export function formatMatchDate(isoDate) {
   const [year, month, day] = isoDate.split('-').map(Number);
-  return DATE.format(new Date(year, month - 1, day));
+  const text = DATE.format(new Date(year, month - 1, day));
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** "2026-11-07" → "7 nov 2026" */

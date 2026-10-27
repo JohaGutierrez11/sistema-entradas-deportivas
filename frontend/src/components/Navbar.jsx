@@ -27,10 +27,12 @@ export default function Navbar() {
           {isClient && <NavLink to="/reservas">Mis reservas</NavLink>}
           {isAdmin && (
             <>
-              <NavLink to="/admin/estadios">Estadios</NavLink>
+              <NavLink to="/admin/estadios">Escenarios</NavLink>
               <NavLink to="/admin/partidos">Partidos</NavLink>
               <NavLink to="/admin/usuarios">Usuarios</NavLink>
               <NavLink to="/admin/reportes">Reportes</NavLink>
+              <NavLink to="/admin/control-acceso">Control de acceso</NavLink>
+              <NavLink to="/admin/configuracion">Configuración</NavLink>
             </>
           )}
         </div>

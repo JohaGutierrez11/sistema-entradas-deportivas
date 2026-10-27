@@ -2,20 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { matchApi } from '../../api/matchApi';
 import BoxEditor from '../../components/admin/BoxEditor';
+import SectionEditForm from '../../components/admin/SectionEditForm';
 import SectionForm from '../../components/admin/SectionForm';
 import StadiumMap from '../../components/StadiumMap';
 import { DEFAULT_BOX, FIELD_BOX, findBoxProblem, sectionTypeLabel } from '../../utils/stadiumPlan';
 
 const numberFormat = new Intl.NumberFormat('es-EC');
 
-/** Secciones y plano de un estadio (HU-28 + HU-38): crear secciones y ubicarlas sobre el mapa. */
+/** Secciones y plano de un escenario (HU-28 + HU-38): crear secciones y ubicarlas sobre el mapa. */
 export default function StadiumSectionsPage() {
   const { stadiumId } = useParams();
   const [stadium, setStadium] = useState(null);
   const [sections, setSections] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
-  const [panel, setPanel] = useState(null);   // null · { mode: 'new' } · { mode: 'box', section, box }
+  const [panel, setPanel] = useState(null);   // null · { mode: 'new' } · { mode: 'box', section, box } · { mode: 'edit', section }
 
   const load = useCallback(() => {
     Promise.all([matchApi.getStadium(stadiumId), matchApi.listSections(stadiumId)])
@@ -32,8 +33,9 @@ export default function StadiumSectionsPage() {
   // El mapa reusa StadiumMap: la sección que se está moviendo se oculta y se dibuja como borrador
   const layout = useMemo(() => ({
     field: FIELD_BOX,
+    venueType: stadium?.venueType,
     sections: (sections ?? []).filter((s) => s.id !== editingId).map((s) => ({ ...s, rows: [] })),
-  }), [sections, editingId]);
+  }), [sections, editingId, stadium]);
 
   function openBoxEditor(section) {
     setNotice(null);
@@ -46,6 +48,12 @@ export default function StadiumSectionsPage() {
     setPanel({ mode: 'box', section, box: DEFAULT_BOX });
   }
 
+  function handleSectionUpdated(section) {
+    setNotice(`Se guardaron los cambios de ${section.name}.`);
+    setPanel(null);
+    load();
+  }
+
   function handleBoxSaved(section) {
     setNotice(`Se guardó la ubicación de ${section.name}.`);
     setPanel(null);
@@ -56,11 +64,11 @@ export default function StadiumSectionsPage() {
     return (
       <section>
         <p className="alert alert-error" role="alert">{error}</p>
-        <Link to="/admin/estadios">← Volver a estadios</Link>
+        <Link to="/admin/estadios">← Volver a escenarios</Link>
       </section>
     );
   }
-  if (!stadium || !sections) return <p className="muted">Cargando estadio…</p>;
+  if (!stadium || !sections) return <p className="muted">Cargando escenario…</p>;
 
   const freeCapacity = stadium.totalCapacity - usedCapacity;
   const usedPercent = Math.min(100, Math.round((usedCapacity / stadium.totalCapacity) * 100));
@@ -68,7 +76,7 @@ export default function StadiumSectionsPage() {
 
   return (
     <section>
-      <Link to="/admin/estadios" className="back-link">← Estadios</Link>
+      <Link to="/admin/estadios" className="back-link">← Escenarios</Link>
       <div className="page-header page-header-row">
         <div>
           <h1>{stadium.name}</h1>
@@ -118,18 +126,25 @@ export default function StadiumSectionsPage() {
                        onChange={(box) => setPanel((current) => ({ ...current, box }))}
                        onSaved={handleBoxSaved} onCancel={() => setPanel(null)} />
           )}
-          {!panel && <SectionList sections={sections} onPlace={openBoxEditor} />}
+          {panel?.mode === 'edit' && (
+            <SectionEditForm key={panel.section.id} section={panel.section}
+                             onSaved={handleSectionUpdated} onCancel={() => setPanel(null)} />
+          )}
+          {!panel && (
+            <SectionList sections={sections} onPlace={openBoxEditor}
+                         onEdit={(section) => { setNotice(null); setPanel({ mode: 'edit', section }); }} />
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function SectionList({ sections, onPlace }) {
+function SectionList({ sections, onPlace, onEdit }) {
   if (sections.length === 0) {
     return (
       <div className="card empty-state">
-        <p><strong>Este estadio aún no tiene secciones.</strong></p>
+        <p><strong>Este escenario aún no tiene secciones.</strong></p>
         <p className="muted">Sin secciones no hay asientos que vender.</p>
       </div>
     );
@@ -153,7 +168,11 @@ function SectionList({ sections, onPlace }) {
               <td className="num" title={`${section.rowCount} filas × ${section.seatsPerRow}`}>
                 {section.capacity} <span className="muted small">({section.rowCount}×{section.seatsPerRow})</span>
               </td>
-              <td>
+              <td className="row-actions">
+                <button type="button" className="btn btn-small" onClick={() => onEdit(section)}
+                        aria-label={`Editar ${section.name}`}>
+                  Editar
+                </button>
                 <button type="button" className={`btn btn-small ${section.box ? '' : 'btn-solid'}`}
                         onClick={() => onPlace(section)}>
                   {section.box ? 'Mover' : 'Ubicar'}

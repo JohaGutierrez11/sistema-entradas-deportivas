@@ -8,7 +8,7 @@ export default function MatchCard({ match }) {
       <StatusBadge status={match.status} />
       <h2 className="match-name">{match.name}</h2>
       <p className="match-when">
-        <span className="capitalize">{formatMatchDate(match.matchDate)}</span> · {match.matchTime}
+        {formatMatchDate(match.matchDate)} · {match.matchTime}
       </p>
       <p className="muted">{match.stadium.name}</p>
       {(match.status === 'PROGRAMADO' || match.status === 'EN_CURSO') && (

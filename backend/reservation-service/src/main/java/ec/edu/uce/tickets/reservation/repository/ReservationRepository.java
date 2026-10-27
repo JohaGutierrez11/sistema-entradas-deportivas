@@ -33,4 +33,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
                                            @Param("now") LocalDateTime now);
 
     List<Reservation> findByClientIdOrderByCreatedAtDesc(Long clientId);
+
+    /** Partidos que todavía tienen reservas activas (HU-46): son los únicos que vale la pena revisar. */
+    @Query("SELECT DISTINCT r.matchId FROM Reservation r WHERE r.status IN :statuses")
+    List<Long> findMatchIdsWithStatusIn(@Param("statuses") List<ReservationStatus> statuses);
+
+    /** Reservas activas de un partido, BLOQUEADAS: nadie las confirma ni cancela mientras se anulan. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Reservation r WHERE r.matchId = :matchId AND r.status IN :statuses")
+    List<Reservation> findByMatchIdAndStatusInForUpdate(@Param("matchId") Long matchId,
+                                                        @Param("statuses") List<ReservationStatus> statuses);
 }

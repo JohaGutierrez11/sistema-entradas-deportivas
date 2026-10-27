@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.match.service;
 import ec.edu.uce.tickets.match.dto.StadiumRequest;
 import ec.edu.uce.tickets.match.dto.StadiumResponse;
 import ec.edu.uce.tickets.match.entity.Stadium;
+import ec.edu.uce.tickets.match.entity.VenueType;
 import ec.edu.uce.tickets.match.exception.BusinessRuleException;
 import ec.edu.uce.tickets.match.exception.DuplicateResourceException;
 import ec.edu.uce.tickets.match.exception.ResourceInUseException;
@@ -52,6 +53,7 @@ public class StadiumService {
         stadium.setDescription(request.description());
         stadium.setLocation(request.location().trim());
         stadium.setTotalCapacity(request.totalCapacity());
+        stadium.setVenueType(request.venueType() != null ? request.venueType() : VenueType.ESTADIO);
 
         Stadium saved = stadiumRepository.save(stadium);
         return StadiumResponse.from(saved);
@@ -77,6 +79,9 @@ public class StadiumService {
         stadium.setDescription(request.description());
         stadium.setLocation(request.location().trim());
         stadium.setTotalCapacity(request.totalCapacity());
+        if (request.venueType() != null) {   // al editar, si no se envía, se conserva
+            stadium.setVenueType(request.venueType());
+        }
 
         return StadiumResponse.from(stadium);
     }

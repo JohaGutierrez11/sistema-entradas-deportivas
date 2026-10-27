@@ -27,6 +27,10 @@ INSERT INTO stadium (id, name, description, location, total_capacity) VALUES
   (4, 'Estadio George Capwell',             'Escenario del barrio Centenario',            'Av. Quito y San Martín, Guayaquil',            40000),
   (5, 'Estadio Gonzalo Pozo Ripalda',       'Ubicado en el sur de Quito',                 'Chillogallo, Quito',                           18000);
 
+-- Coliseo (el enunciado pide escenarios de tipo estadio y coliseo). Aforo referencial.
+INSERT INTO stadium (id, name, description, location, total_capacity, venue_type) VALUES
+  (6, 'Coliseo General Rumiñahui', 'Escenario cubierto para básquet, vóley y otros deportes', 'Quito', 8000, 'COLISEO');
+
 -- ---------------------------------------------------------------------
 -- section: 7 localidades por estadio (la misma plantilla en los 5).
 -- capacity = row_count * seats_per_row (lo exige ck_section_capacity).
@@ -60,7 +64,24 @@ CROSS JOIN (VALUES
   (6, 'General Norte',                'Graderío popular detrás del arco norte',         'GENERAL',     26, 80, 28,  3, 44, 20),
   (7, 'General Sur',                  'Graderío popular detrás del arco sur',           'GENERAL',     26, 80, 28, 77, 44, 20)
 ) AS t(ord, name, description, section_type, row_count, seats_per_row, pos_x, pos_y, width, height)
+WHERE s.venue_type = 'ESTADIO'
 ORDER BY s.id, t.ord;
+
+-- Localidades del coliseo (ids 36 a 41, después de las de los estadios): graderíos alrededor
+-- de la cancha, más pequeños que los de un estadio. Total: 2 140 asientos.
+INSERT INTO section (id, stadium_id, name, description, section_type, row_count, seats_per_row, capacity,
+                     pos_x, pos_y, width, height)
+SELECT t.id, 6, t.name, t.description, t.section_type, t.row_count, t.seats_per_row,
+       t.row_count * t.seats_per_row, t.pos_x, t.pos_y, t.width, t.height
+FROM (VALUES
+  (36, 'Palco Central',                'Palcos frente a la mitad de la cancha',  'PALCOS',       4, 20,  4, 40, 22, 20),
+  (37, 'Preferencia Occidental Norte', 'Graderío numerado, lado norte',          'PREFERENCIA', 10, 25,  4, 18, 22, 20),
+  (38, 'Preferencia Occidental Sur',   'Graderío numerado, lado sur',            'PREFERENCIA', 10, 25,  4, 62, 22, 20),
+  (39, 'Tribuna Oriental',             'Graderío frente a la preferencia',       'TRIBUNAS',    15, 40, 74, 18, 22, 64),
+  (40, 'General Norte',                'Graderío detrás del tablero norte',      'GENERAL',     12, 40, 28,  3, 44, 20),
+  (41, 'General Sur',                  'Graderío detrás del tablero sur',        'GENERAL',     12, 40, 28, 77, 44, 20)
+) AS t(id, name, description, section_type, row_count, seats_per_row, pos_x, pos_y, width, height)
+ORDER BY t.id;
 
 -- ---------------------------------------------------------------------
 -- seat_row: una fila por letra (A, B, C...) según row_count.
@@ -84,6 +105,7 @@ ORDER BY s.id, g;
 --   General Norte                 4301 - 6380 (fila A = 4301-4380, ...)
 --   General Sur                   6381 - 8460
 -- Cada estadio siguiente suma 8460: estadio N empieza en (N-1)*8460 + 1.
+-- El coliseo (escenario 6) va después de los 5 estadios: seat.id 42301..44440.
 -- Fórmula: id = inicio_estadio + inicio_sección + (fila - 1) * asientos_por_fila + número - 1.
 -- ---------------------------------------------------------------------
 INSERT INTO seat (seat_row_id, seat_number)
@@ -104,7 +126,8 @@ INSERT INTO sport_match (id, name, description, match_date, match_time, status, 
   (3, 'Emelec vs Barcelona SC',                   'Clásico del Astillero', '2026-11-14', '19:00', 'PROGRAMADO', 4),
   (4, 'Barcelona SC vs Liga de Quito',            'LigaPro · Fecha 16', '2026-11-21', '17:00', 'PROGRAMADO', 3),
   (5, 'Aucas vs Deportivo Cuenca',                'LigaPro · Fecha 11', '2026-10-10', '15:00', 'FINALIZADO', 5),
-  (6, 'Universidad Católica vs El Nacional',      'LigaPro · Fecha 17', '2026-11-28', '12:00', 'CANCELADO',  1);
+  (6, 'Universidad Católica vs El Nacional',      'LigaPro · Fecha 17', '2026-11-28', '12:00', 'CANCELADO',  1),
+  (7, 'Final de la Liga Ecuatoriana de Baloncesto', 'Baloncesto · Final', '2026-11-15', '19:30', 'PROGRAMADO', 6);
 
 -- ---------------------------------------------------------------------
 -- Reiniciar las secuencias de las tablas con ids explícitos.

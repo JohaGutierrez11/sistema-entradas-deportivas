@@ -37,8 +37,8 @@ a { color: var(--blue-600); }
 /* =================================================================== Navbar */
 .navbar { background: #fff; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 10; }
 .navbar-inner {
-  max-width: 1100px; margin: 0 auto; padding: 0.6rem 1.25rem;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 2rem;
+  max-width: 1320px; margin: 0 auto; padding: 0.6rem 1.25rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem;
 }
 .brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--blue-900); text-decoration: none; font-size: 1.05rem; }
 .brand-mark {
@@ -47,9 +47,9 @@ a { color: var(--blue-600); }
 }
 .brand-light { font-weight: 400; color: var(--gray-600); margin-left: 0.25rem; }
 
-.nav-links { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.nav-links { display: flex; flex-wrap: wrap; gap: 0.15rem; }
 .nav-links a {
-  padding: 0.45rem 0.8rem; border-radius: var(--radius);
+  padding: 0.45rem 0.7rem; border-radius: var(--radius); white-space: nowrap;
   color: var(--gray-600); text-decoration: none; font-weight: 500;
 }
 .nav-links a:hover { background: var(--gray-100); color: var(--gray-900); }
@@ -57,6 +57,12 @@ a { color: var(--blue-600); }
 
 .nav-user { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
 .nav-user > a { color: var(--gray-600); text-decoration: none; font-weight: 500; }
+
+/* Pantallas medianas: marca y usuario arriba, enlaces en su propia fila (no se parte la barra a la mitad) */
+@media (max-width: 1240px) {
+  .nav-user { order: 2; }
+  .nav-links { order: 3; width: 100%; margin: 0 -0.7rem; }
+}
 
 /* Menú del usuario (desplegable nativo con <details>) */
 .user-menu { position: relative; }
@@ -128,7 +134,6 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 
 /* =================================================================== Catálogo */
 .page-header { margin-bottom: 1rem; }
-.capitalize { text-transform: capitalize; }
 
 .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem 1.25rem; }
 .filter-field label { margin-top: 0; }
@@ -176,6 +181,11 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .pitch-lines rect, .pitch-lines line, .pitch-lines circle { fill: none; stroke: rgba(255, 255, 255, 0.8); stroke-width: 1; }
 .pitch-spot { fill: rgba(255, 255, 255, 0.85); }
 .pitch-goal { fill: #fff; }
+/* Cancha de coliseo (HU-42) */
+.map-track-court { fill: #b9b6ad; }
+.court-floor { fill: #d8a36a; }
+.court-lines rect, .court-lines line, .court-lines circle, .court-lines path { fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 1; }
+.court-hoop { fill: none; stroke: #c4441c; stroke-width: 1.2; }
 .map-section { cursor: pointer; outline: none; }
 .map-section rect { stroke: #fff; stroke-width: 1.5; transition: opacity 0.15s; }
 .map-section:hover rect, .map-section:focus-visible rect { opacity: 0.85; }
@@ -278,7 +288,7 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 /* =================================================================== Mis reservas */
 .page-header-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .page-header-row h1 { margin: 0; }
-.segmented { display: inline-flex; gap: 0.25rem; padding: 0.25rem; background: var(--gray-100); border-radius: 10px; margin-bottom: 1rem; }
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem; background: var(--gray-100); border-radius: 10px; margin-bottom: 1rem; }
 .segmented button { border: none; background: none; font: inherit; padding: 0.45rem 0.9rem; border-radius: 8px; cursor: pointer; color: var(--gray-600); font-weight: 500; }
 .segmented button.is-active { background: #fff; color: var(--blue-900); box-shadow: var(--shadow); }
 .segmented .count { display: inline-block; min-width: 1.4rem; padding: 0 0.35rem; margin-left: 0.25rem; border-radius: 999px; background: var(--gray-200); font-size: 0.75rem; }
@@ -344,3 +354,36 @@ input[aria-invalid='true'] { border-color: var(--red-600); }
 .report-sections td, .report-sections th { padding: 0.45rem 0.5rem; }
 .bar-col { width: 40%; }
 .seat-names { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+
+/* Inicio del administrador */
+.module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.module-card { display: flex; flex-direction: column; gap: 0.35rem; text-decoration: none; color: inherit; transition: border-color 0.15s; }
+.module-card:hover { border-color: var(--blue-600); }
+.module-card strong { color: var(--blue-900); }
+
+/* Configuración (HU-43) */
+.settings-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.settings-text { flex: 1 1 320px; }
+.settings-text p { margin: 0.25rem 0; }
+.settings-control { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; min-width: 14rem; }
+.settings-input { display: flex; align-items: center; gap: 0.5rem; }
+.settings-input input { width: 6.5rem; text-align: right; }
+.settings-readonly { font-weight: 600; font-size: 1.1rem; }
+
+/* Control de acceso (HU-47) */
+.access-form { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.4fr); gap: 1rem; margin-bottom: 1rem; }
+@media (max-width: 760px) { .access-form { grid-template-columns: 1fr; } }
+.access-input { display: flex; gap: 0.5rem; }
+.access-input input { flex: 1; font-family: 'Courier New', monospace; }
+.access-result { text-align: center; border-width: 2px; }
+.access-result.is-valid { background: var(--green-50); border-color: #97c459; }
+.access-result.is-invalid { background: var(--red-50); border-color: var(--red-600); }
+.access-verdict { font-size: 1.8rem; font-weight: 800; margin: 0; letter-spacing: 0.02em; }
+.access-result.is-valid .access-verdict { color: var(--green-800); }
+.access-result.is-invalid .access-verdict { color: var(--red-600); }
+.access-message { margin: 0.35rem 0 0.75rem; }
+.access-details { display: inline-grid; grid-template-columns: auto auto; gap: 0.25rem 1rem; text-align: left; margin: 0; }
+.access-details dt { color: var(--gray-600); font-weight: 600; }
+.access-details dd { margin: 0; }
+.ticket-code { display: block; font-size: 0.6rem; word-break: break-all; color: var(--gray-600); margin-top: 0.25rem; user-select: all; }

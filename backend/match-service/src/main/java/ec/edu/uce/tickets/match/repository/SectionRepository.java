@@ -16,6 +16,11 @@ public interface SectionRepository extends JpaRepository<Section, Long> {
             nativeQuery = true)
     boolean existsByStadiumIdAndNameKey(@Param("stadiumId") Long stadiumId, @Param("name") String name);
 
+    /** Al editar: ¿otra sección del mismo estadio ya usa ese nombre? (se ignora a sí misma) */
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM section WHERE stadium_id = :stadiumId AND id <> :id AND name_key(name) = name_key(:name))",
+            nativeQuery = true)
+    boolean existsByStadiumIdAndNameKeyAndIdNot(@Param("stadiumId") Long stadiumId, @Param("name") String name, @Param("id") Long id);
+
     @Query("SELECT COALESCE(SUM(s.capacity), 0) FROM Section s WHERE s.stadium.id = :stadiumId")
     long sumCapacityByStadiumId(@Param("stadiumId") Long stadiumId);
 

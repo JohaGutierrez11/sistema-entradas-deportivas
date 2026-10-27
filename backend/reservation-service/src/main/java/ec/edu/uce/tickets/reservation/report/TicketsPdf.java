@@ -2,6 +2,7 @@ package ec.edu.uce.tickets.reservation.report;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
+import ec.edu.uce.tickets.reservation.client.SeatLabel;
 import ec.edu.uce.tickets.reservation.dto.MatchSummary;
 import ec.edu.uce.tickets.reservation.dto.ReservationResponse;
 import ec.edu.uce.tickets.reservation.dto.TicketResponse;
@@ -13,6 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 /** Dibuja las entradas: una página tamaño A6 por ticket, con su QR. */
 @Component
@@ -34,7 +36,8 @@ public class TicketsPdf {
         this.qrCodeGenerator = qrCodeGenerator;
     }
 
-    public byte[] build(ReservationResponse reservation, MatchSummary match, List<TicketResponse> tickets) {
+    public byte[] build(ReservationResponse reservation, MatchSummary match, Map<Long, SeatLabel> seats,
+                        List<TicketResponse> tickets) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A6, 24, 24, 24, 24);   // A6: tamaño de un pase
         try {
@@ -45,7 +48,7 @@ public class TicketsPdf {
                 if (i > 0) {
                     document.newPage();
                 }
-                addTicketPage(document, reservation, match, tickets.get(i), i + 1, tickets.size());
+                addTicketPage(document, reservation, match, seats.get(tickets.get(i).seatId()), tickets.get(i), i + 1, tickets.size());
             }
         } catch (DocumentException | IOException e) {
             throw new IllegalStateException("No se pudo generar el PDF de entradas", e);
@@ -55,7 +58,7 @@ public class TicketsPdf {
         return out.toByteArray();
     }
 
-    private void addTicketPage(Document document, ReservationResponse reservation, MatchSummary match,
+    private void addTicketPage(Document document, ReservationResponse reservation, MatchSummary match, SeatLabel seat,
                                TicketResponse ticket, int number, int total) throws DocumentException, IOException {
         document.add(centered("ENTRADA", LABEL, 4));
 
@@ -67,7 +70,13 @@ public class TicketsPdf {
             document.add(centered("Partido #" + reservation.matchId(), MATCH, 8));
         }
 
-        document.add(centered("Asiento " + ticket.seatId(), SEAT, 2));
+        if (seat != null) {
+            document.add(centered(seat.sectionName(), TEXT, 1));
+            document.add(centered(seat.rowAndNumber(), SEAT, 2));
+        } else {
+            // Degradación: sin match-service se imprime el id técnico, pero la entrada sigue siendo válida (el QR manda)
+            document.add(centered("Asiento #" + ticket.seatId(), SEAT, 2));
+        }
         document.add(centered("Reserva " + reservation.code(), TEXT, 8));
 
         Image qr = Image.getInstance(qrCodeGenerator.toPng(ticket.qrCode()));

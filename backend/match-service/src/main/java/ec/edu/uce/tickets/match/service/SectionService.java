@@ -3,6 +3,7 @@ package ec.edu.uce.tickets.match.service;
 import ec.edu.uce.tickets.match.dto.SectionBoxRequest;
 import ec.edu.uce.tickets.match.dto.SectionRequest;
 import ec.edu.uce.tickets.match.dto.SectionResponse;
+import ec.edu.uce.tickets.match.dto.SectionUpdateRequest;
 import ec.edu.uce.tickets.match.dto.StadiumLayoutResponse;
 import ec.edu.uce.tickets.match.entity.*;
 import ec.edu.uce.tickets.match.exception.BusinessRuleException;
@@ -93,6 +94,21 @@ public class SectionService {
         Section saved = sectionRepository.save(section);
         return SectionResponse.from(saved);
 
+    }
+
+    /** Cambia el nombre y la descripción de una sección; las filas y los asientos no se tocan. */
+    @Transactional
+    public SectionResponse update(Long sectionId, SectionUpdateRequest request) {
+        Section section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe la sección con el id " + sectionId));
+
+        String name = NameNormalizer.clean(request.name());
+        if (sectionRepository.existsByStadiumIdAndNameKeyAndIdNot(section.getStadium().getId(), name, sectionId)) {
+            throw new DuplicateResourceException("Ya existe otra sección con el nombre \"" + name + "\" en este estadio");
+        }
+        section.setName(name);
+        section.setDescription(request.description() == null || request.description().isBlank() ? null : request.description().trim());
+        return SectionResponse.from(section);   // dirty checking: se guarda al terminar la transacción
     }
 
     /** Ubica o mueve una sección en el plano (HU-38). */

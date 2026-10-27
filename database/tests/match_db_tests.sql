@@ -29,6 +29,10 @@ SELECT pg_temp.expect_violation('Estadio repetido con espacios de más',
   $$INSERT INTO stadium (name, location, total_capacity) VALUES ('  t_estadio  ', 'Guayaquil', 500)$$, 'uk_stadium_name');
 SELECT pg_temp.expect_true('name_key quita tildes, mayúsculas y espacios de más',
   $$SELECT name_key('  Estadio   Olímpico  Atahualpa ') = 'estadio olimpico atahualpa'$$);
+SELECT pg_temp.expect_violation('Escenario con un tipo fuera del catálogo',
+  $$INSERT INTO stadium (name, location, total_capacity, venue_type) VALUES ('T_Arena', 'Quito', 500, 'ARENA')$$, 'ck_stadium_venue_type');
+SELECT pg_temp.expect_ok('Crear un coliseo válido',
+  $$INSERT INTO stadium (name, location, total_capacity, venue_type) VALUES ('T_Coliseo', 'Quito', 500, 'COLISEO')$$);
 SELECT pg_temp.expect_violation('Estadio con capacidad 0',
   $$INSERT INTO stadium (name, location, total_capacity) VALUES ('T_Otro', 'Quito', 0)$$, 'ck_stadium_capacity');
 
