@@ -57,7 +57,8 @@ public class TicketService {
     private static TicketValidationResponse result(Ticket ticket, boolean valid, TicketValidationResponse.Result result,
                                                    String message) {
         return new TicketValidationResponse(valid, result, message, ticket.getPublicId(), ticket.getSeatId(),
-                ticket.getReservation().getCode(), ticket.getReservation().getClientId(), ticket.getUsedAt());
+                ticket.getReservation().getCode(), ticket.getReservation().getClientId(), ticket.getUsedAt(),
+                ticket.getReservation().getMatchId());
     }
 
     // readOnly: ticket.getReservation() es LAZY y necesita la sesión abierta
