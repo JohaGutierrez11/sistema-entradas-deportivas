@@ -781,7 +781,9 @@ paths:
             application/json:
               examples:
                 valida:
-                  value: { valid: true, result: VALIDA, message: 'Entrada válida: puede ingresar', seatId: 201, reservationCode: RES-2026-000002, clientId: 2 }
+                  value: { valid: true, result: VALIDA, message: 'Entrada válida: puede ingresar', seatId: 201, reservationCode: RES-2026-000002, clientId: 2, ticketMatchId: 1 }
+                otroPartido:
+                  value: { valid: false, result: OTRO_PARTIDO, message: 'La entrada es de otro partido: El Nacional vs Barcelona SC (7 de noviembre, 15:30)', seatId: 201, reservationCode: RES-2026-000002, clientId: 2, ticketMatchId: 1 }
                 yaUsada:
                   value: { valid: false, result: YA_UTILIZADA, message: 'La entrada ya se usó: alguien ingresó con ella', seatId: 201, reservationCode: RES-2026-000002, clientId: 2 }
         '400': { $ref: '#/components/responses/ValidationError' }
