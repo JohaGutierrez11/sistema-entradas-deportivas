@@ -37,7 +37,51 @@ Parte práctica del examen complexivo de Ingeniería en Sistemas de Información
 
 ## Cómo levantarlo
 
-**Requisitos:** Docker Desktop, JDK 17, Node 22 LTS.
+### Opción A · Docker Compose (recomendada)
+
+**Requisito:** solo Docker Desktop. No hace falta instalar JDK, Maven ni Node: cada servicio se compila dentro de su contenedor.
+
+```powershell
+# 1. Variables de entorno (una sola vez): copiar el ejemplo y completar los valores
+Copy-Item .env.example .env
+
+# 2. Construir y levantar todo
+docker compose up -d --build
+
+# 3. Ver el estado: postgres debe decir (healthy)
+docker compose ps
+```
+
+| Qué | Dónde |
+|---|---|
+| Aplicación | http://localhost:5173 |
+| auth-service · match-service · reservation-service | http://localhost:8081 · 8082 · 8083 |
+| PostgreSQL (DBeaver) | localhost:5433 · usuario postgres |
+| Bandeja de Mailpit | http://localhost:8025 |
+
+**Cómo está armado:**
+
+| Servicio | Imagen | Detalle |
+|---|---|---|
+| `postgres` | postgres:16 | [`docker/postgres/init-databases.sh`](docker/postgres/init-databases.sh) crea las tres bases y carga esquema y semillas **solo la primera vez** (volumen vacío). Healthcheck: espera a que la última base tenga datos |
+| `mailpit` | axllent/mailpit | SMTP 2525 → 1025 del contenedor; bandeja en 8025 |
+| `auth-service`, `match-service`, `reservation-service` | Dockerfile de dos etapas: Maven + JDK 17 compila, JRE 17 ejecuta | Arrancan cuando postgres está *healthy*. Dentro de la red se llaman por nombre: `postgres:5432`, `mailpit:1025`, `http://match-service:8082` |
+| `frontend` | Dockerfile de dos etapas: Node 22 compila, nginx sirve | [`frontend/nginx.conf`](frontend/nginx.conf) reemplaza al proxy de Vite (`/auth-api` → auth-service, etc.) y devuelve `index.html` en las rutas de la SPA |
+
+**Comandos útiles:**
+
+```powershell
+docker compose logs -f reservation-service    # ver el log de un servicio
+docker compose up -d --build match-service    # reconstruir solo uno después de un cambio
+docker compose down                           # apagar (los datos se conservan)
+docker compose down -v                        # apagar y BORRAR los datos: la próxima vez se recargan las semillas
+```
+
+> Si cambias un script `.sql`, no se aplica hasta ejecutar `docker compose down -v`: el script de inicio solo corre con el volumen vacío. Las 120 pruebas de base de datos se ejecutan con la opción B.
+
+### Opción B · Manual (sin Docker para los servicios)
+
+**Requisitos:** Docker Desktop, JDK 17, Node 22 LTS. Apaga antes la opción A (`docker compose down`), porque usan los mismos puertos.
 
 ```powershell
 # 1. Base de datos: contenedor pg-entradas, 3 bases, tablas, semillas y 120 pruebas
@@ -72,8 +116,9 @@ Los servicios arrancan sin configurar nada: cada variable tiene un valor **solo 
 | `JWT_SECRET` | los tres | Firma y validación del token (mínimo 32 caracteres) | `dev-only-secret-…` |
 | `INTERNAL_API_KEY` | match, reservation | Clave de las llamadas internas entre servicios | `dev-internal-key-…` |
 | `MATCH_SERVICE_URL` | reservation | Dónde está match-service | `http://localhost:8082` |
+| `POSTGRES_PASSWORD` | postgres y los tres servicios (solo Docker Compose) | Contraseña de la base | `postgres` |
 
-En PowerShell, antes de `mvnw spring-boot:run`: `$env:JWT_SECRET = "una-clave-larga-y-aleatoria"`.
+Con Docker Compose, los valores se toman del archivo `.env` (que **no** se sube a Git; [`.env.example`](.env.example) muestra cuáles hacen falta). En la opción B, en PowerShell, antes de `mvnw spring-boot:run`: `$env:JWT_SECRET = "una-clave-larga-y-aleatoria"`.
 
 ### Usuarios de prueba
 
@@ -132,7 +177,7 @@ Las reglas viven en el backend. Cuando el front las repite (por ejemplo, el plan
 | Las reservas de un evento juntan datos de dos servicios en el navegador | El nombre vive en auth_db y la reserva en reservation_db; la pantalla compone ambas respuestas (si auth-service cae, muestra "Cliente #id") | Un BFF o un API Gateway que haga esa composición en el servidor |
 | Las secciones solo permiten cambiar nombre y descripción; no se eliminan ni cambian sus filas | Sus asientos están referenciados desde otra base, sin llave foránea | Permitirlo solo si el estadio no tiene partidos |
 | Swagger UI está abierto | Facilita la revisión del examen | Desactivarlo en producción (`springdoc.swagger-ui.enabled=false`) |
-| Sin despliegue con un solo comando | Pendiente del Sprint 4 | `docker compose` con los cinco contenedores |
+| Docker Compose es para desarrollo y demostración, no para producción | Un solo equipo, sin réplicas ni reinicio automático entre servidores | Kubernetes (o un servicio administrado) con réplicas de reservation-service |
 
 ## Uso de inteligencia artificial
 
